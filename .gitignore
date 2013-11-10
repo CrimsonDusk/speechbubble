@@ -1,0 +1,5 @@
+build
+cobaltirc
+*.kdev4
+cobaltirc.xml
+untracked
