@@ -3,3 +3,4 @@ speechbubble
 *.kdev4
 speechbubble.xml
 untracked
+Makefile
