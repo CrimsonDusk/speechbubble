@@ -1,8 +1,8 @@
 #ifndef COIRC_MACROS_H
 #define COIRC_MACROS_H
 
-#define APPNAME "CobaltIRC"
-#define UNIXNAME "cobaltirc"
+#define APPNAME "Speechbubble"
+#define UNIXNAME "speechbubble"
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 99
 #define VERSION_PATCH 0

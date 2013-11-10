@@ -1,4 +1,4 @@
-cobaltirc
-=========
+speechbubble
+============
 
 some random IRC client

@@ -3,7 +3,7 @@
 ######################################################################
 
 TEMPLATE     = app
-TARGET       = cobaltirc
+TARGET       = speechbubble
 DEPENDPATH  += . src
 INCLUDEPATH += . src
 CONFIG      += debug
