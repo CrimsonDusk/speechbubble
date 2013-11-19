@@ -15,13 +15,13 @@ int main (int argc, char* argv[])
 {	QApplication app (argc, argv);
 	init_crash_catcher();
 
-	if (!Config::load (configname))
-	{	flog (stderr, "unable to load %1: %2\n", configname, XMLDocument::get_parse_error());
+	if (!Config::Load (configname))
+	{	flog (stderr, "unable to load %1: %2\n", configname, XMLDocument::GetParseError());
 		return 1;
 	}
 
 	(new MainWindow)->show();
-	Context::set_current_context (null);
+	Context::SetCurrentContext (null);
 	app.exec();
 }
 

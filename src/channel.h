@@ -117,20 +117,20 @@ class IRCChannel
 		IRCChannel (IRCConnection* conn, QString name);
 		~IRCChannel();
 
-		Entry*             addUser (IRCUser* info);
+		Entry*             AddUser (IRCUser* info);
 		void               apply_mode_string (QString text);
-		void               delUser (IRCUser* info);
-		Entry*             findUser (QString name);
-		Entry*             findUser (IRCUser* info);
+		void               RemoveUser (IRCUser* info);
+		Entry*             FindUser (QString name);
+		Entry*             FindUser (IRCUser* info);
 		QString            mode_string() const;
 		int                num_users() const;
-		long               statusof (IRCUser* info);
-		Status             effective_status_of (IRCUser* info);
+		long               StatusOf (IRCUser* info);
+		Status             EffectiveStatusOf (IRCUser* info);
 		IRCChannelMode*    get_mode (ChanMode modenum);
 
-		static Status      effective_status (long mode);
+		static Status      EffectiveStatus (long mode);
 		static StatusFlags get_status_flag (char c);
-		static QString     status_name (long mode);
+		static QString     StatusName (long mode);
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS (IRCChannel::StatusFlags)

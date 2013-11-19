@@ -6,17 +6,17 @@
 // =============================================================================
 // -----------------------------------------------------------------------------
 namespace Config
-{	ConfigData              g_config_data[COBALT_MAX_CONFIG];
-	int                     g_cfg_data_cursor = 0;
-	static XMLDocument*     g_xml_document = null;
+{	ConfigData              g_ConfigData[COBALT_MAX_CONFIG];
+	int                     g_ConfigDataCursor = 0;
+	static XMLDocument*     g_XMLDocument = null;
 
 	// =============================================================================
 	// -----------------------------------------------------------------------------
-	static void saveToXML (QString name, void* ptr, Type type)
-	{	XMLNode* node = g_xml_document->navigate_to (name.split ("_"), true);
+	static void SaveToXML (QString name, void* ptr, Type type)
+	{	XMLNode* node = g_XMLDocument->NavigateTo (name.split ("_"), true);
 
 		if (!node)
-			node = new XMLNode (name, g_xml_document->root());
+			node = new XMLNode (name, g_XMLDocument->Root());
 
 		switch (type)
 		{	case IntType:
@@ -65,7 +65,7 @@ namespace Config
 
 	// =============================================================================
 	// -----------------------------------------------------------------------------
-	static void loadFromXML (void* ptr, Type type, XMLNode* node)
+	static void LoadFromXML (void* ptr, Type type, XMLNode* node)
 	{	switch (type)
 		{	case IntType:
 				*(reinterpret_cast<int*> (ptr)) = node->contents().toLong();
@@ -81,7 +81,7 @@ namespace Config
 
 			case BoolType:
 			{	QString val = node->contents();
-				bool& var = * (reinterpret_cast<bool*> (ptr));
+				bool& var = *(reinterpret_cast<bool*> (ptr));
 
 				if (val == "true" || val == "1" || val == "on" || val == "yes")
 					var = true;
@@ -115,48 +115,48 @@ namespace Config
 	// =============================================================================
 	// Load the configuration from file
 	// -----------------------------------------------------------------------------
-	bool load (QString fname)
+	bool Load (QString fname)
 	{	log ("config::load: Loading configuration file from %1\n", fname);
 
-		XMLDocument* doc = XMLDocument::load (fname);
+		XMLDocument* doc = XMLDocument::LoadFromFile (fname);
 
 		if (!doc)
 			return false;
 
-		for (auto& i : g_config_data)
+		for (auto& i : g_ConfigData)
 		{	if (i.name == null)
 				break;
 
-			XMLNode* node = doc->navigate_to (QString (i.name).split ("_"));
+			XMLNode* node = doc->NavigateTo (QString (i.name).split ("_"));
 
 			if (node)
-				loadFromXML (i.ptr, i.type, node);
+				LoadFromXML (i.ptr, i.type, node);
 		}
 
-		g_xml_document = doc;
+		g_XMLDocument = doc;
 		return true;
 	}
 
 	// =============================================================================
 	// Save the configuration to disk
 	// -----------------------------------------------------------------------------
-	bool save (QString fname)
-	{	if (g_xml_document == null)
-			g_xml_document = XMLDocument::new_document ("config");
+	bool SaveTo (QString fname)
+	{	if (g_XMLDocument == null)
+			g_XMLDocument = XMLDocument::NewDocument ("config");
 
 		log ("Saving configuration to %1...\n", fname);
 
-		for (auto& i : g_config_data)
+		for (auto& i : g_ConfigData)
 		{	if (i.name == null)
 				break;
 
-			saveToXML (i.name, i.ptr, i.type);
+			SaveToXML (i.name, i.ptr, i.type);
 		}
 
-		return g_xml_document->save (fname);
+		return g_XMLDocument->save (fname);
 	}
 
 	XMLDocument* xml()
-	{	return g_xml_document;
+	{	return g_XMLDocument;
 	}
 }

@@ -6,7 +6,7 @@
 // Determine status level of this user.
 // -----------------------------------------------------------------------------
 IRCChannel::Status IRCUser::channel_status (IRCChannel* chan)
-{	return chan->effective_status_of (this);
+{	return chan->EffectiveStatusOf (this);
 }
 
 // =============================================================================

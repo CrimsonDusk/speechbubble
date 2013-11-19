@@ -15,14 +15,14 @@ IRCChannel::~IRCChannel()
 {	delete context();
 }
 
-IRCChannel::Entry* IRCChannel::addUser (IRCUser* info)
+IRCChannel::Entry* IRCChannel::AddUser (IRCUser* info)
 {	Entry e (info, FNormal);
 	info->add_known_channel (this);
 	m_userlist << e;
 	return &m_userlist.last();
 }
 
-void IRCChannel::delUser (IRCUser* info)
+void IRCChannel::RemoveUser (IRCUser* info)
 {	info->del_known_channel (this);
 
 	for (Entry& e : m_userlist)
@@ -33,7 +33,7 @@ void IRCChannel::delUser (IRCUser* info)
 	}
 }
 
-IRCChannel::Entry* IRCChannel::findUser (QString name)
+IRCChannel::Entry* IRCChannel::FindUser (QString name)
 {	for (Entry& e : m_userlist)
 	{	if (e.userinfo()->nick() == name)
 			return &e;
@@ -42,7 +42,7 @@ IRCChannel::Entry* IRCChannel::findUser (QString name)
 	return null;
 }
 
-IRCChannel::Entry* IRCChannel::findUser (IRCUser* info)
+IRCChannel::Entry* IRCChannel::FindUser (IRCUser* info)
 {	for (Entry& e : m_userlist)
 	{	if (e.userinfo() == info)
 			return &e;
@@ -55,8 +55,8 @@ bool IRCChannel::Entry::operator== (const IRCChannel::Entry& other) const
 {	return (userinfo() == other.userinfo()) && (status() == other.status());
 }
 
-long IRCChannel::statusof (IRCUser* info)
-{	Entry* e = findUser (info);
+long IRCChannel::StatusOf (IRCUser* info)
+{	Entry* e = FindUser (info);
 
 	if (!e)
 		return FNormal;
@@ -64,17 +64,17 @@ long IRCChannel::statusof (IRCUser* info)
 	return e->status();
 }
 
-IRCChannel::Status IRCChannel::effective_status_of (IRCUser* info)
-{	Entry* e = findUser (info);
+IRCChannel::Status IRCChannel::EffectiveStatusOf (IRCUser* info)
+{	Entry* e = FindUser (info);
 
 	if (!e)
 		return FNormal;
 
 	long mode = e->status();
-	return effective_status (mode);
+	return EffectiveStatus (mode);
 }
 
-IRCChannel::Status IRCChannel::effective_status (long mode)
+IRCChannel::Status IRCChannel::EffectiveStatus (long mode)
 {	if (mode & FOwner)  return FOwner;
 	if (mode & FAdmin)  return FAdmin;
 	if (mode & FOp)     return FOp;
@@ -84,8 +84,8 @@ IRCChannel::Status IRCChannel::effective_status (long mode)
 	return FNormal;
 }
 
-QString IRCChannel::status_name (long int mode)
-{	switch (effective_status (mode))
+QString IRCChannel::StatusName (long int mode)
+{	switch (EffectiveStatus (mode))
 	{	case FOwner:
 			return "Owner";
 
@@ -212,7 +212,7 @@ void IRCChannel::apply_mode_string (QString text)
 			str arg = args.last();
 			args.removeLast();
 
-			Entry* e = findUser (arg);
+			Entry* e = FindUser (arg);
 
 			if (!e)
 				continue;

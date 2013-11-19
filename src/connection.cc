@@ -92,9 +92,12 @@ void IRCConnection::start()
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::stop()
-{	if (state() == EConnected)
-		write (fmt ("QUIT :%1\n", cfg::quitmessage));
+void IRCConnection::stop (QString quitmessage)
+{	if (quitmessage.isEmpty())
+		quitmessage = cfg::quitmessage;
+
+	if (state() == EConnected)
+		write (fmt ("QUIT :%1\n", quitmessage));
 
 	m_socket->disconnectFromHost();
 	m_timer->stop();
@@ -126,7 +129,8 @@ void IRCConnection::ReadyRead() // [slot]
 // -----------------------------------------------------------------------------
 void IRCConnection::ConnectionError (QAbstractSocket::SocketError err) // [slot]
 {	(void) err;
-	Print (fmt ("\\b\\c4Failed to connect: %1\n", m_socket->errorString ()));
+
+	Print (fmt ("\\b\\c4Connection error: %1\n", m_socket->errorString ()));
 	set_state (EDisconnected);
 }
 

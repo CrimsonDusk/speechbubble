@@ -32,8 +32,8 @@ namespace Config
 		const char* name;
 	};
 
-	extern ConfigData g_config_data[COBALT_MAX_CONFIG];
-	extern int g_cfg_data_cursor;
+	extern ConfigData g_ConfigData[COBALT_MAX_CONFIG];
+	extern int g_ConfigDataCursor;
 
 	// Type-definitions for the above enum list
 	typedef int Int;
@@ -45,8 +45,8 @@ namespace Config
 	typedef QMap<QString, QString> StringMap;
 
 	// ------------------------------------------
-	bool           load (QString fname);
-	bool           save (QString fname);
+	bool           Load (QString fname);
+	bool           SaveTo (QString fname);
 	XMLDocument*   xml();
 
 	class ConfigAdder
@@ -57,11 +57,11 @@ namespace Config
 			// variables we cannot assume that!! Therefore we need to use a C-style array here.
 			// -----------------------------------------------------------------------------
 			template<class T> ConfigAdder (T* ptr, Type type, const char* name, const T& def)
-			{	if (g_cfg_data_cursor == 0)
-					memset (g_config_data, 0, sizeof g_config_data);
+			{	if (g_ConfigDataCursor == 0)
+				memset (g_ConfigData, 0, sizeof g_ConfigData);
 
-				assert (g_cfg_data_cursor < COBALT_MAX_CONFIG);
-				ConfigData& i = g_config_data[g_cfg_data_cursor++];
+				assert (g_ConfigDataCursor < COBALT_MAX_CONFIG);
+				ConfigData& i = g_ConfigData[g_ConfigDataCursor++];
 				i.ptr = ptr;
 				i.type = type;
 				i.name = name;

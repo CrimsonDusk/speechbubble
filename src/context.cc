@@ -179,59 +179,65 @@ static QMap<int, Context*> g_contexts_by_id;
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-Context::Context (IRCConnection* conn) : QObject(), m_type (EServerContext)
-{	m_target.conn = conn;
-	set_parent (null);
-	common_init();
+Context::Context (IRCConnection* conn) : QObject(), m_Type (EServerContext)
+{	TargetUnion u;
+	u.conn = conn;
+	SetTarget (u);
+	SetParent (null);
+	CommonInit();
 	win->AddContext (this);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-Context::Context (IRCChannel* channel) : QObject(), m_type (EChannelContext)
-{	m_target.chan = channel;
-	set_parent (channel->connection()->context());
-	common_init();
+Context::Context (IRCChannel* channel) : QObject(), m_Type (EChannelContext)
+{	TargetUnion u;
+	u.chan = channel;
+	SetTarget (u);
+	SetParent (channel->connection()->context());
+	CommonInit();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-Context::Context (IRCUser* user) : QObject(), m_type (EQueryContext)
-{	m_target.user = user;
-	set_parent (user->connection()->context());
-	common_init();
+Context::Context (IRCUser* user) : QObject(), m_Type (EQueryContext)
+{	TargetUnion u;
+	u.user = user;
+	SetTarget (u);
+	SetParent (user->connection()->context());
+	CommonInit();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::common_init()
-{	set_id (1);
-	while (g_contexts_by_id.find (id()) != g_contexts_by_id.end())
-		set_id (id() + 1);
+void Context::CommonInit()
+{	SetID (1);
+	while (g_contexts_by_id.find (ID()) != g_contexts_by_id.end())
+		SetID (ID() + 1);
 
 	set_treeitem (new IRCContextTreeWidgetItem (this));
 	set_document (new QTextDocument);
 
-	if (parent())
-		parent()->add_subcontext (this);
+	if (Parent())
+		Parent()->AddSubContext (this);
 
 	g_contexts << this;
-	g_contexts_by_id[id()] = this;
+	g_contexts_by_id[ID()] = this;
 
 	/*
 	log ("initialized context with id %1 (parent: %2)\n",
-		id(), parent() ? QString::number (parent()->id()) : "none");
+		ID(), parent() ? QString::number (parent()->ID()) : "none");
 	*/
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 Context::~Context()
-{	if (parent())
-		parent()->forget_subcontext (this);
+{	if (Parent())
+		Parent()->forget_subcontext (this);
 
 	g_contexts.removeOne (this);
-	g_contexts_by_id.remove (id());
+	g_contexts_by_id.remove (ID());
 	delete treeitem();
 }
 
@@ -243,18 +249,18 @@ const QList<Context*>& Context::all_contexts() // [static]
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::update_tree_item()
-{	treeitem()->setText (0, name());
+void Context::UpdateTreeItem()
+{	treeitem()->setText (0, GetName());
 
 	for (Context* sub : subcontexts())
-		sub->update_tree_item();
+		sub->UpdateTreeItem();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::add_subcontext (Context* child)
+void Context::AddSubContext (Context* child)
 {	m_subcontexts << child;
-	child->set_parent (this);
+	child->SetParent (this);
 	treeitem()->addChild (child->treeitem());
 }
 
@@ -262,14 +268,21 @@ void Context::add_subcontext (Context* child)
 // -----------------------------------------------------------------------------
 void Context::forget_subcontext (Context* child)
 {	m_subcontexts.removeOne (child);
-	child->set_parent (null);
+	child->SetParent (null);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-Context* Context::from_tree_widget_item (QTreeWidgetItem* item)
-{	IRCContextTreeWidgetItem* subitem = dynamic_cast<IRCContextTreeWidgetItem*> (item);
+Context* Context::FromTreeWidgetItem (QTreeWidgetItem* item)
+{	IRCContextTreeWidgetItem* subitem;
+
+#ifndef RELEASE
+	subitem = dynamic_cast<IRCContextTreeWidgetItem*> (item);
 	assert (subitem != null);
+#else
+	subitem = reinterpret_cast<IRCContextTreeWidgetItem*> (item);
+#endif
+
 	return subitem->context();
 }
 
@@ -281,25 +294,25 @@ Context* Context::CurrentContext()
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::set_current_context (Context* context)
+void Context::SetCurrentContext (Context* context)
 {	g_current_context = context;
 	win->UpdateOutputWidget();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-QString Context::name() const
-{	switch (type())
+QString Context::GetName() const
+{	switch (Type())
 	{	case EChannelContext:
-		{	return target().chan->name();
+		{	return Target().chan->name();
 		} break;
 
 		case EQueryContext:
-		{	return target().user->nick();
+		{	return Target().user->nick();
 		} break;
 
 		case EServerContext:
-		{	return target().conn->host();
+		{	return Target().conn->host();
 		} break;
 	}
 
@@ -309,24 +322,24 @@ QString Context::name() const
 // =============================================================================
 // -----------------------------------------------------------------------------
 void Context::Print (QString text, bool allow_internals)
-{	m_html += ConvertToHTML (text, allow_internals);
-	m_document->setHtml (m_html);
+{	SetHTML (HTML() + ConvertToHTML (text, allow_internals));
+	m_document->setHtml (HTML());
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 IRCConnection* Context::GetConnection()
-{	switch (type())
+{	switch (Type())
 	{	case EQueryContext:
-		{	return target().user->connection();
+		{	return Target().user->connection();
 		} break;
 
 		case EChannelContext:
-		{	return target().chan->connection();
+		{	return Target().chan->connection();
 		} break;
 
 		case EServerContext:
-		{	return target().conn;
+		{	return Target().conn;
 		} break;
 	}
 

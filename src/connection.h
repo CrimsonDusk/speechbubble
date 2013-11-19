@@ -106,7 +106,7 @@ class IRCConnection : public QObject
 
 		void write (QString text);
 		void start();
-		void stop();
+		void stop (QString quitmessage = "");
 
 	public slots:
 		void ReadyRead();

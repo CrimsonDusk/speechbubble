@@ -50,7 +50,6 @@ static void handle_crash (int sig)
 	const pid_t pid = getpid();
 	QProcess proc;
 	QTemporaryFile commandsFile;
-
 	g_crashCatcherActive = true;
 
 	if (commandsFile.open())

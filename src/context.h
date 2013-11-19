@@ -31,7 +31,7 @@ class IRCContextTreeWidgetItem : public QTreeWidgetItem
 // -----------------------------------------------------------------------------
 class Context final : public QObject
 {	public:
-		enum Type
+		enum ContextType
 		{	EChannelContext,
 			EQueryContext,
 			EServerContext,
@@ -46,11 +46,11 @@ class Context final : public QObject
 	PROPERTY (public,  IRCContextTreeWidgetItem*,	treeitem)
 	PROPERTY (public,  QTextDocument*,					document)
 	PROPERTY (private, QList<Context*>,					subcontexts)
-	PROPERTY (private, Context*,							parent)
-	PROPERTY (private, TargetUnion,						target)
-	PROPERTY (private, Type,								type)
-	PROPERTY (private, int,									id)
-	PROPERTY (private, QString,							html)
+	NEW_PROPERTY (private, Context*,							Parent)
+	NEW_PROPERTY (private, TargetUnion,						Target)
+	NEW_PROPERTY (private, ContextType,						Type)
+	NEW_PROPERTY (private, int,								ID)
+	NEW_PROPERTY (private, QString,							HTML)
 
 	public:
 		Context (IRCConnection* conn);
@@ -58,21 +58,21 @@ class Context final : public QObject
 		Context (IRCUser* user);
 		~Context();
 
-		void				add_subcontext (Context* child);
+		void				AddSubContext (Context* child);
 		void				forget_subcontext (Context* child);
-		void				update_tree_item();
+		void				UpdateTreeItem();
 		IRCConnection*	GetConnection();
-		QString			name() const;
+		QString			GetName() const;
 		void				Print (QString text, bool allow_internals);
 		void				WriteIRCMessage (QString from, QString msg);
 
 		static const list<Context*>& all_contexts();
-		static Context* from_tree_widget_item (QTreeWidgetItem* item);
+		static Context* FromTreeWidgetItem (QTreeWidgetItem* item);
 		static Context* CurrentContext();
-		static void set_current_context (Context* context);
+		static void SetCurrentContext (Context* context);
 
 	private:
-		void common_init();
+		void CommonInit();
 };
 
 #endif // COBALTIRC_CONTEXT_H

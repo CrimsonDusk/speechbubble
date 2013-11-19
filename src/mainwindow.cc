@@ -1,5 +1,6 @@
 #include <QDialog>
 #include <QCloseEvent>
+#include <QMessageBox>
 #include "mainwindow.h"
 #include "connection.h"
 #include "context.h"
@@ -99,7 +100,7 @@ void MainWindow::ActionQuit()
 void MainWindow::AddContext (Context* a)
 {	m_ui->m_channels->addTopLevelItem (a->treeitem());
 	a->treeitem()->setExpanded (true);
-	a->update_tree_item();
+	a->UpdateTreeItem();
 }
 
 // =============================================================================
@@ -112,7 +113,25 @@ void MainWindow::RemoveContext (Context* a)
 // =============================================================================
 // -----------------------------------------------------------------------------
 void MainWindow::closeEvent (QCloseEvent* ev)
-{	Config::save (configname);
+{	int numactive = 0;
+
+	for (Context* c : Context::all_contexts())
+		if (c->Type() == Context::EServerContext && c->GetConnection()->state() == IRCConnection::EConnected)
+			numactive++;
+
+	if (numactive > 0)
+	{	if (QMessageBox::question (this, "Really quit?",
+			fmt (tr ("There are %1 active connections, do you really want to quit?"), numactive),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+		{	ev->ignore();
+			return;
+		}
+	}
+
+	for (Context* c : Context::all_contexts())
+		c->GetConnection()->stop();
+
+	Config::SaveTo (configname);
 	ev->accept();
 }
 
@@ -131,7 +150,7 @@ void MainWindow::UpdateOutputWidget()
 // =============================================================================
 // -----------------------------------------------------------------------------
 void MainWindow::ContextSelected (QTreeWidgetItem* item)
-{	Context::set_current_context (Context::from_tree_widget_item (item));
+{	Context::SetCurrentContext (Context::FromTreeWidgetItem (item));
 }
 
 // =============================================================================
@@ -156,6 +175,9 @@ void MainWindow::InputEnterPressed() // [slot]
 	if (input.isEmpty() && !CtrlPressed())
 		return;
 
+	// Remove the message from the input field
+	m_ui->m_input->setText ("");
+
 	if (input.startsWith ("/"))
 	{	input.remove (0, 1); // remove the '/'
 		QStringList args = input.split (" ", QString::SkipEmptyParts);
@@ -165,9 +187,9 @@ void MainWindow::InputEnterPressed() // [slot]
 		for (int i = 0; i < g_NumCommands; ++i)
 		{	if (cmd.toLower() == g_Commands[i].name)
 			{	try
-				{	(*g_Commands[i].func) (args);
+				{	(*g_Commands[i].func) (args, &g_Commands[i]);
 				} catch (CommandError& err)
-				{	Context::CurrentContext()->Print (fmt ("\\b\\c4%1\n", err.what()), true);
+				{	Context::CurrentContext()->Print (fmt (tr ("\\b\\c4Error: %1\n"), err.what()), true);
 				}
 
 				return;
@@ -176,14 +198,21 @@ void MainWindow::InputEnterPressed() // [slot]
 
 		// No command matched, send as raw
 		Context::CurrentContext()->Print (fmt ("-> raw: %1\n", input), true);
-		conn->write (input);
+		conn->write (input + "\n");
 		return;
 	}
 
-	if (context->type() == Context::EServerContext)
-		conn->write (input);
-	else
-	{	QString target = context->type() == Context::EQueryContext ? context->target().user->nick() : context->target().chan->name();
-		conn->write (fmt ("PRIVMSG %1 :%2\n", target, input));
+	switch (context->Type())
+	{	case Context::EServerContext:
+		{	conn->write (input + "\n");
+		} break;
+
+		case Context::EChannelContext:
+		{	conn->write (fmt ("PRIVMSG %1 :%2\n", context->Target().chan->name(), input));
+		} break;
+
+		case Context::EQueryContext:
+		{	conn->write (fmt ("PRIVMSG %1 :%2\n", context->Target().user->nick(), input));
+		} break;
 	}
 }

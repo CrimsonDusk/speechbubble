@@ -13,23 +13,23 @@ class XMLDocument
 {	public:
 		typedef QMap<QString, QString> HeaderType;
 
-	PROPERTY (protected, HeaderType, header)
-	PROPERTY (private,   XMLNode*,   root)
+	NEW_PROPERTY (protected, HeaderType, Header)
+	NEW_PROPERTY (private,   XMLNode*,   Root)
 
 	public:
 		XMLDocument (XMLNode* root = null);
 		~XMLDocument();
 
-		XMLNode*                find_node_by_name (QString name) const;
-		XMLNode*                navigate_to (const QStringList& path, bool allowMake = false) const;
+		XMLNode*                FindNodeByName (QString name) const;
+		XMLNode*                NavigateTo (const QStringList& path, bool allowMake = false) const;
 		bool                    save (QString fname) const;
 		void                    set_root (XMLNode* root);
 
-		static QString          encode (QString in);
-		static QString          decode (QString in);
-		static QString          get_parse_error();
-		static XMLDocument*     load (QString fname);
-		static XMLDocument*     new_document (QString rootName);
+		static QString          Encode (QString in);
+		static QString          Decode (QString in);
+		static QString          GetParseError();
+		static XMLDocument*     LoadFromFile (QString fname);
+		static XMLDocument*     NewDocument (QString rootName);
 
 	private:
 		void                    writeNode (FILE* fp, const XMLNode* node) const;

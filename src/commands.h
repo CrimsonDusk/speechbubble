@@ -3,7 +3,8 @@
 
 #include "main.h"
 
-typedef void (*CommandFunction) (QStringList);
+struct CommandInfo;
+typedef void (*CommandFunction) (QStringList, const CommandInfo*);
 
 struct CommandInfo
 {	QString				name;
