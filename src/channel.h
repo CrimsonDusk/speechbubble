@@ -7,7 +7,8 @@
 class Context;
 class IRCConnection;
 class IRCUser;
-enum ChanMode
+
+enum EChanMode
 {	EChanModeAllInvite,
 	EChanModeBan,
 	EChanModeBlockCaps,
@@ -55,16 +56,18 @@ enum ChanMode
 	EChanModeGenericRestrict,
 };
 
+// =========================================================================
+// -------------------------------------------------------------------------
 struct ChannelModeInfo
 {	const char c;
-	const ChanMode mode;
+	const EChanMode mode;
 	const str name;
 	const bool hasArg;
 };
 
 // =========================================================================
 // -------------------------------------------------------------------------
-struct IRCChannelMode
+struct ChannelMode
 {	const ChannelModeInfo* info;
 	QString arg;
 };
@@ -73,7 +76,7 @@ class IRCChannel
 {	public:
 		// =========================================================================
 		// -------------------------------------------------------------------------
-		enum Status
+		enum EStatus
 		{	FNormal = (0),
 			FVoiced = (1 << 0),
 			FHalfOp = (1 << 1),
@@ -82,57 +85,54 @@ class IRCChannel
 			FOwner  = (1 << 4),
 		};
 
-		Q_DECLARE_FLAGS (StatusFlags, Status)
+		Q_DECLARE_FLAGS (FStatusFlags, EStatus)
 
 		// =========================================================================
 		// -------------------------------------------------------------------------
 		class Entry
-		{	PROPERTY (public, IRCUser*, userinfo)
-			PROPERTY (public, long, status)
+		{	NEW_PROPERTY (public, IRCUser*, UserInfo)
+			NEW_PROPERTY (public, IRCChannel::FStatusFlags, Status)
 
 			public:
-				Entry (IRCUser* user, Status stat) :
-					m_userinfo (user),
-					m_status (stat) {}
+				Entry (IRCUser* user, EStatus stat) :
+					m_UserInfo (user),
+					m_Status (stat) {}
 
 				bool operator== (const Entry& other) const;
 		};
 
 	// =========================================================================
 	// -------------------------------------------------------------------------
-	PROPERTY (public,  QString,               name)
-	PROPERTY (public,  QString,               topic)
-	PROPERTY (public,  QTime,                 joinTime)
-	PROPERTY (public,  Context*,           context)
-	PROPERTY (private, IRCConnection*,        connection)
-	PROPERTY (private, QList<Entry>,          userlist)
-	PROPERTY (private, QList<IRCChannelMode>, modes)
-	PROPERTY (private, QStringList,           banlist)
-	PROPERTY (private, QStringList,           whitelist)
-	PROPERTY (private, QStringList,           invitelist)
+	NEW_PROPERTY (public,  QString,					Name)
+	NEW_PROPERTY (public,  QString,					Topic)
+	NEW_PROPERTY (public,  QTime,						JoinTime)
+	NEW_PROPERTY (public,  Context*,					Context)
+	NEW_PROPERTY (private, IRCConnection*,			Connection)
+	NEW_PROPERTY (private, QList<Entry>,			Userlist)
+	NEW_PROPERTY (private, QList<ChannelMode>,	Modes)
+	NEW_PROPERTY (private, QStringList,				Banlist)
+	NEW_PROPERTY (private, QStringList,				Whitelist)
+	NEW_PROPERTY (private, QStringList,				Invitelist)
 
 	public:
-		typedef ChannelModeInfo modeinfo;
-
 		IRCChannel (IRCConnection* conn, QString name);
 		~IRCChannel();
 
-		Entry*             AddUser (IRCUser* info);
-		void               apply_mode_string (QString text);
-		void               RemoveUser (IRCUser* info);
-		Entry*             FindUser (QString name);
-		Entry*             FindUser (IRCUser* info);
-		QString            mode_string() const;
-		int                num_users() const;
-		long               StatusOf (IRCUser* info);
-		Status             EffectiveStatusOf (IRCUser* info);
-		IRCChannelMode*    get_mode (ChanMode modenum);
+		Entry*					addUser (IRCUser* info);
+		void						applyModeString (QString text);
+		void						removeUser (IRCUser* info);
+		Entry*					findUserByName (QString name);
+		Entry*					findUser (IRCUser* info);
+		QString					getModeString() const;
+		FStatusFlags			getStatusOf (IRCUser* info);
+		EStatus					getEffectiveStatusOf (IRCUser* info);
+		ChannelMode*			getMode (EChanMode modenum);
 
-		static Status      EffectiveStatus (long mode);
-		static StatusFlags get_status_flag (char c);
-		static QString     StatusName (long mode);
+		static EStatus			effectiveStatus (FStatusFlags mode);
+		static FStatusFlags	getStatusFlag (char c);
+		static QString			getStatusName (FStatusFlags mode);
 };
 
-Q_DECLARE_OPERATORS_FOR_FLAGS (IRCChannel::StatusFlags)
+Q_DECLARE_OPERATORS_FOR_FLAGS (IRCChannel::FStatusFlags)
 
 #endif // COBALT_IRC_CHANNEL_H

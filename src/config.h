@@ -3,6 +3,7 @@
 
 // =============================================================================
 #include <QStringList>
+#include <QFont>
 #include "main.h"
 
 #define CONFIG(T, NAME, DEFAULT) namespace cfg { Config::T NAME = DEFAULT; } \
@@ -24,6 +25,7 @@ namespace Config
 		IntListType,
 		StringListType,
 		StringMapType,
+		FontType,
 	};
 
 	struct ConfigData
@@ -43,6 +45,7 @@ namespace Config
 	typedef QList<int> IntList;
 	typedef QStringList StringList;
 	typedef QMap<QString, QString> StringMap;
+	typedef QFont Font;
 
 	// ------------------------------------------
 	bool           Load (QString fname);

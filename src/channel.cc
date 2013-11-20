@@ -5,46 +5,46 @@
 #include <qstringlist.h>
 
 IRCChannel::IRCChannel (IRCConnection* conn, QString name) :
-	m_name (name),
-	m_joinTime (QTime::currentTime()),
-	m_connection (conn)
-{	set_context (new Context (this));
+	m_Name (name),
+	m_JoinTime (QTime::currentTime()),
+	m_Connection (conn)
+{	setContext (new Context (this));
 }
 
 IRCChannel::~IRCChannel()
-{	delete context();
+{	delete getContext();
 }
 
-IRCChannel::Entry* IRCChannel::AddUser (IRCUser* info)
+IRCChannel::Entry* IRCChannel::addUser (IRCUser* info)
 {	Entry e (info, FNormal);
-	info->add_known_channel (this);
-	m_userlist << e;
-	return &m_userlist.last();
+	info->addKnownChannel (this);
+	m_Userlist << e;
+	return &(m_Userlist.last());
 }
 
-void IRCChannel::RemoveUser (IRCUser* info)
-{	info->del_known_channel (this);
+void IRCChannel::removeUser (IRCUser* info)
+{	info->dropKnownChannel (this);
 
-	for (Entry& e : m_userlist)
-	{	if (e.userinfo() == info)
-		{	m_userlist.removeOne (e);
+	for (const Entry& e : getUserlist())
+	{	if (e.getUserInfo() == info)
+		{	m_Userlist.removeOne (e);
 			return;
 		}
 	}
 }
 
-IRCChannel::Entry* IRCChannel::FindUser (QString name)
-{	for (Entry& e : m_userlist)
-	{	if (e.userinfo()->nick() == name)
+IRCChannel::Entry* IRCChannel::findUserByName (QString name)
+{	for (Entry& e : m_Userlist)
+	{	if (e.getUserInfo()->getNickname() == name)
 			return &e;
 	}
 
 	return null;
 }
 
-IRCChannel::Entry* IRCChannel::FindUser (IRCUser* info)
-{	for (Entry& e : m_userlist)
-	{	if (e.userinfo() == info)
+IRCChannel::Entry* IRCChannel::findUser (IRCUser* info)
+{	for (Entry& e : m_Userlist)
+	{	if (e.getUserInfo() == info)
 			return &e;
 	}
 
@@ -52,29 +52,29 @@ IRCChannel::Entry* IRCChannel::FindUser (IRCUser* info)
 }
 
 bool IRCChannel::Entry::operator== (const IRCChannel::Entry& other) const
-{	return (userinfo() == other.userinfo()) && (status() == other.status());
+{	return (getUserInfo() == other.getUserInfo()) && (getStatus() == other.getStatus());
 }
 
-long IRCChannel::StatusOf (IRCUser* info)
-{	Entry* e = FindUser (info);
+IRCChannel::FStatusFlags IRCChannel::getStatusOf (IRCUser* info)
+{	Entry* e = findUser (info);
 
 	if (!e)
 		return FNormal;
 
-	return e->status();
+	return e->getStatus();
 }
 
-IRCChannel::Status IRCChannel::EffectiveStatusOf (IRCUser* info)
-{	Entry* e = FindUser (info);
+IRCChannel::EStatus IRCChannel::getEffectiveStatusOf (IRCUser* info)
+{	Entry* e = findUser (info);
 
 	if (!e)
 		return FNormal;
 
-	long mode = e->status();
-	return EffectiveStatus (mode);
+	FStatusFlags mode = e->getStatus();
+	return effectiveStatus (mode);
 }
 
-IRCChannel::Status IRCChannel::EffectiveStatus (long mode)
+IRCChannel::EStatus IRCChannel::effectiveStatus (IRCChannel::FStatusFlags mode)
 {	if (mode & FOwner)  return FOwner;
 	if (mode & FAdmin)  return FAdmin;
 	if (mode & FOp)     return FOp;
@@ -84,8 +84,8 @@ IRCChannel::Status IRCChannel::EffectiveStatus (long mode)
 	return FNormal;
 }
 
-QString IRCChannel::StatusName (long int mode)
-{	switch (EffectiveStatus (mode))
+QString IRCChannel::getStatusName (IRCChannel::FStatusFlags mode)
+{	switch (effectiveStatus (mode))
 	{	case FOwner:
 			return "Owner";
 
@@ -106,10 +106,6 @@ QString IRCChannel::StatusName (long int mode)
 	}
 
 	return "User";
-}
-
-int IRCChannel::num_users() const
-{	return m_userlist.size();
 }
 
 const ChannelModeInfo g_ChannelModeInfo[] =
@@ -163,7 +159,7 @@ const ChannelModeInfo g_ChannelModeInfo[] =
 	CHANMODE ('Z', NamedMode,      true)
 };
 
-IRCChannel::StatusFlags IRCChannel::get_status_flag (char c)
+IRCChannel::FStatusFlags IRCChannel::getStatusFlag (char c)
 {	switch (c)
 	{	case 'q':
 			return FOwner;
@@ -184,7 +180,7 @@ IRCChannel::StatusFlags IRCChannel::get_status_flag (char c)
 	return 0;
 }
 
-void IRCChannel::apply_mode_string (QString text)
+void IRCChannel::applyModeString (QString text)
 {	bool neg = false;
 	QStringList args = text.split (" ", QString::SkipEmptyParts);
 	uint argidx = 0;
@@ -212,20 +208,20 @@ void IRCChannel::apply_mode_string (QString text)
 			str arg = args.last();
 			args.removeLast();
 
-			Entry* e = FindUser (arg);
+			Entry* e = findUserByName (arg);
 
 			if (!e)
 				continue;
 
-			long status = e->status();
-			long flag = get_status_flag (c);
+			FStatusFlags status = e->getStatus();
+			FStatusFlags flag = getStatusFlag (c);
 
 			if (!neg)
 				status |= flag;
 			else
 				status &= ~flag;
 
-			e->set_status (status);
+			e->setStatus (status);
 			continue;
 		}
 
@@ -235,7 +231,7 @@ void IRCChannel::apply_mode_string (QString text)
 
 			if (neg == false)
 			{	// New mode
-				IRCChannelMode mode;
+				ChannelMode mode;
 				mode.info = &it;
 
 				if (it.hasArg)
@@ -243,17 +239,17 @@ void IRCChannel::apply_mode_string (QString text)
 					args.removeLast();
 				}
 
-				m_modes << mode;
+				m_Modes << mode;
 			}
 			else
 			{	// Remove existing mode
-				for (int j = 0; j < m_modes.size(); ++j)
-				{	IRCChannelMode mode = m_modes[j];
+				for (int j = 0; j < getModes().size(); ++j)
+				{	ChannelMode mode = getModes()[j];
 
 					if (mode.info != &it)
 						continue;
 
-					m_modes.removeAt (j);
+					m_Modes.removeAt (j);
 
 					if (!mode.arg.isEmpty())
 						argidx++;
@@ -265,11 +261,11 @@ void IRCChannel::apply_mode_string (QString text)
 	}
 }
 
-str IRCChannel::mode_string() const
+str IRCChannel::getModeString() const
 {	str modestring;
 	QStringList args;
 
-	for (const IRCChannelMode& mode : m_modes)
+	for (const ChannelMode& mode : m_Modes)
 	{	modestring += mode.info->c;
 
 		if (mode.info->hasArg)
@@ -280,8 +276,8 @@ str IRCChannel::mode_string() const
 	return args.join (" ");
 }
 
-IRCChannelMode* IRCChannel::get_mode (ChanMode modenum)
-{	for (IRCChannelMode& mode : m_modes)
+ChannelMode* IRCChannel::getMode (EChanMode modenum)
+{	for (ChannelMode& mode : m_Modes)
 	{	if (mode.info->mode != modenum)
 			continue;
 

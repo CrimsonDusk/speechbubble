@@ -19,17 +19,15 @@
 	private: \
 		T m_##NAME; \
 		public: \
-			inline T const& NAME() const { return m_##NAME; } \
+			inline T const& get##NAME() const { return m_##NAME; } \
 			ACCESS: \
-			inline void Set##NAME (T const& a) { m_##NAME = a; }
-
-#define defineClass(NAME) typedef NAME SelfType;
+			inline void set##NAME (T const& a) { m_##NAME = a; }
 
 // Q_DELETE_COPY is not sufficient for me, with it KDevelop still thinks the copy c-tor
 // and the copy operator are valid functions and nags me to create definitions for them.
 // It understands what a deleted method is though. Plus this is the c++11 way of doing
 // it anyway.
-#define deleteCopy(NAME) \
+#define DELETE_COPY(NAME) \
 		NAME (const NAME&) = delete; \
 		void operator= (const NAME&) = delete;
 

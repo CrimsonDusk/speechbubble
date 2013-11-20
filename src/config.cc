@@ -1,6 +1,6 @@
 #include "main.h"
 #include "config.h"
-#include "xml.h"
+#include "xml_document.h"
 #include "format.h"
 
 // =============================================================================
@@ -13,42 +13,42 @@ namespace Config
 	// =============================================================================
 	// -----------------------------------------------------------------------------
 	static void SaveToXML (QString name, void* ptr, Type type)
-	{	XMLNode* node = g_XMLDocument->NavigateTo (name.split ("_"), true);
+	{	XMLNode* node = g_XMLDocument->navigateTo (name.split ("_"), true);
 
 		if (!node)
-			node = new XMLNode (name, g_XMLDocument->Root());
+			node = new XMLNode (name, g_XMLDocument->getRoot());
 
 		switch (type)
 		{	case IntType:
-			{	node->set_contents (QString::number (*(reinterpret_cast<int*> (ptr))));
+			{	node->setContents (QString::number (*(reinterpret_cast<int*> (ptr))));
 			} break;
 
 			case StringType:
-			{	node->set_contents (*(reinterpret_cast<QString*> (ptr)));
+			{	node->setContents (*(reinterpret_cast<QString*> (ptr)));
 			} break;
 
 			case FloatType:
-			{	node->set_contents (QString::number (*(reinterpret_cast<float*> (ptr))));
+			{	node->setContents (QString::number (*(reinterpret_cast<float*> (ptr))));
 			} break;
 
 			case BoolType:
-			{	node->set_contents (*(reinterpret_cast<bool*> (ptr)) ? "true" : "false");
+			{	node->setContents (*(reinterpret_cast<bool*> (ptr)) ? "true" : "false");
 			} break;
 
 			case StringListType:
-			{	for (XMLNode* subnode : node->nodes())
+			{	for (XMLNode* subnode : node->getSubnodes())
 					delete subnode;
 
 				for (QString item : *(reinterpret_cast<StringList*> (ptr)))
 				{	XMLNode* subnode = new XMLNode ("item", node);
-					subnode->set_contents (item);
+					subnode->setContents (item);
 				}
 			} break;
 
 			case IntListType:
 			{	for (int item : *(reinterpret_cast<IntList*> (ptr)))
 				{	XMLNode* subnode = new XMLNode ("item", node);
-					subnode->set_contents (QString::number (item));
+					subnode->setContents (QString::number (item));
 				}
 			} break;
 
@@ -57,8 +57,12 @@ namespace Config
 
 				for (auto it = map.begin(); it != map.end(); ++it)
 				{	XMLNode* subnode = new XMLNode (it.key(), node);
-					subnode->set_contents (it.value());
+					subnode->setContents (it.value());
 				}
+			} break;
+
+			case FontType:
+			{	node->setContents (reinterpret_cast<QFont*> (ptr)->toString());
 			} break;
 		}
 	}
@@ -68,19 +72,19 @@ namespace Config
 	static void LoadFromXML (void* ptr, Type type, XMLNode* node)
 	{	switch (type)
 		{	case IntType:
-				*(reinterpret_cast<int*> (ptr)) = node->contents().toLong();
+				*(reinterpret_cast<int*> (ptr)) = node->getContents().toLong();
 				break;
 
 			case StringType:
-				*(reinterpret_cast<QString*> (ptr)) = node->contents();
+				*(reinterpret_cast<QString*> (ptr)) = node->getContents();
 				break;
 
 			case FloatType:
-				*(reinterpret_cast<float*> (ptr)) = node->contents().toFloat();
+				*(reinterpret_cast<float*> (ptr)) = node->getContents().toFloat();
 				break;
 
 			case BoolType:
-			{	QString val = node->contents();
+			{	QString val = node->getContents();
 				bool& var = *(reinterpret_cast<bool*> (ptr));
 
 				if (val == "true" || val == "1" || val == "on" || val == "yes")
@@ -92,22 +96,26 @@ namespace Config
 			case StringListType:
 			{	QStringList& var = *(reinterpret_cast<QStringList*> (ptr));
 
-				for (const XMLNode *subnode : node->nodes())
-					var << subnode->contents();
+				for (const XMLNode *subnode : node->getSubnodes())
+					var << subnode->getContents();
 			} break;
 
 			case IntListType:
 			{	QList<int>& var = *(reinterpret_cast<QList<int>*> (ptr));
 
-				for (const XMLNode *subnode : node->nodes())
-					var << subnode->contents().toLong();
+				for (const XMLNode *subnode : node->getSubnodes())
+					var << subnode->getContents().toLong();
 			} break;
 
 			case StringMapType:
 			{	StringMap& var = *(reinterpret_cast<StringMap*> (ptr));
 
-				for (const XMLNode *subnode : node->nodes())
-					var[subnode->name()] = subnode->contents();
+				for (const XMLNode *subnode : node->getSubnodes())
+					var[subnode->getName()] = subnode->getContents();
+			} break;
+
+			case FontType:
+			{	reinterpret_cast<QFont*> (ptr)->fromString (node->getContents());
 			} break;
 		}
 	}
@@ -118,7 +126,7 @@ namespace Config
 	bool Load (QString fname)
 	{	log ("config::load: Loading configuration file from %1\n", fname);
 
-		XMLDocument* doc = XMLDocument::LoadFromFile (fname);
+		XMLDocument* doc = XMLDocument::loadFromFile (fname);
 
 		if (!doc)
 			return false;
@@ -127,7 +135,7 @@ namespace Config
 		{	if (i.name == null)
 				break;
 
-			XMLNode* node = doc->NavigateTo (QString (i.name).split ("_"));
+			XMLNode* node = doc->navigateTo (QString (i.name).split ("_"));
 
 			if (node)
 				LoadFromXML (i.ptr, i.type, node);
@@ -142,7 +150,7 @@ namespace Config
 	// -----------------------------------------------------------------------------
 	bool SaveTo (QString fname)
 	{	if (g_XMLDocument == null)
-			g_XMLDocument = XMLDocument::NewDocument ("config");
+			g_XMLDocument = XMLDocument::newDocument ("config");
 
 		log ("Saving configuration to %1...\n", fname);
 
@@ -153,7 +161,7 @@ namespace Config
 			SaveToXML (i.name, i.ptr, i.type);
 		}
 
-		return g_XMLDocument->save (fname);
+		return g_XMLDocument->saveToFile (fname);
 	}
 
 	XMLDocument* xml()

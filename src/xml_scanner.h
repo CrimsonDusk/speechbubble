@@ -5,7 +5,7 @@
 
 class XMLScanner
 {	public:
-		enum Token
+		enum EToken
 		{	EHeaderStart,
 			EHeaderEnd,
 			ETagCloser,
@@ -18,25 +18,21 @@ class XMLScanner
 			EString
 		};
 
-	PROPERTY (private, const char*,  data);
-	PROPERTY (private, const char*,  ptr);
-	PROPERTY (private, QString,      token);
-	PROPERTY (private, Token,        token_type);
-	PROPERTY (private, bool,         inside_tag);
-	PROPERTY (private, int,          line)
+	NEW_PROPERTY (private, const char*,  Data);
+	NEW_PROPERTY (private, const char*,  Position);
+	NEW_PROPERTY (private, QString,      Token);
+	NEW_PROPERTY (private, EToken,       TokenType);
+	NEW_PROPERTY (private, bool,         IsInsideTag);
+	NEW_PROPERTY (private, int,          Line)
 
 	public:
 		XMLScanner (const char* data);
 
-		bool next();
-		bool next (Token tok);
+		bool scanNextToken();
+		bool scanNextToken (EToken tok);
 
 	private:
 		bool checkString (const char* c, bool peek = false);
-
-		inline void incr_ptr()
-		{	m_ptr++;
-		}
 };
 
 #endif // LIBCOBALTCORE_XML_SCANNER_H

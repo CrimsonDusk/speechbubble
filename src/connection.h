@@ -22,7 +22,7 @@ class QTimer;
 
 class IRCConnection : public QObject
 {	public:
-		enum State
+	enum EConnectionState
 		{	EDisconnected,
 			EConnecting,
 			ERegistering,
@@ -31,7 +31,7 @@ class IRCConnection : public QObject
 
 		// =============================================================================
 		// IRC server reply codes.. not a comprehensive list
-		enum ReplyCode
+		enum EReplyCode
 		{	ERplWelcome             =   1,
 			ERplYourHost            =   2,
 			ERplCreated             =   3,
@@ -89,40 +89,41 @@ class IRCConnection : public QObject
 		};
 
 	Q_OBJECT
-	defineClass (IRCConnection)
-	deleteCopy (IRCConnection)
-	PROPERTY (public,  QString,           nick)
-	PROPERTY (public,  QString,           user)
-	PROPERTY (public,  QString,           name)
-	PROPERTY (private, Context*,       context)
-	PROPERTY (private, QString,           host)
-	PROPERTY (private, quint16,           port)
-	PROPERTY (private, State,            state)
-	PROPERTY (private, QString,       linework)
+	DELETE_COPY (IRCConnection)
+	NEW_PROPERTY (public,  QString,				Nick)
+	NEW_PROPERTY (public,  QString,				User)
+	NEW_PROPERTY (public,  QString,				Name)
+	NEW_PROPERTY (private, Context*,				Context)
+	NEW_PROPERTY (private, QString,				Hostname)
+	NEW_PROPERTY (private, quint16,				Port)
+	NEW_PROPERTY (private, EConnectionState,	State)
+	NEW_PROPERTY (private, QString,				Linework)
 
 	public:
 		explicit IRCConnection (QString host, quint16 port, QObject* parent = 0);
 		virtual ~IRCConnection();
 
 		void write (QString text);
-		void start();
-		void stop (QString quitmessage = "");
+		void connectToServer();
+		void disconnectFromServer (QString quitmessage = "");
+
+		static const QList<IRCConnection*>& getAllConnections();
 
 	public slots:
-		void ReadyRead();
-		void login();
+		void readyRead();
+		void writeLogin();
 
 	private:
 		QTcpSocket* m_socket;
 		QTimer*     m_timer;
 
-		void Incoming (QString msg);
-		void Print (QString msg, bool allow_internals = true);
-		void ParseNumeric (QString msg, QStringList tokens, int num);
+		void processMessage (QString msg);
+		void print (QString msg, bool allow_internals = true);
+		void parseNumeric (QString msg, QStringList tokens, int num);
 
 	private slots:
-		void Tick();
-		void ConnectionError (QAbstractSocket::SocketError err);
+		void tick();
+		void processConnectionError (QAbstractSocket::SocketError err);
 };
 
 #endif // COIRC_CONNECTION_H

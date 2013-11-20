@@ -35,17 +35,17 @@ static str lrange (const QStringList& list, int a, int b = -1)
 // -----------------------------------------------------------------------------
 IRCConnection::IRCConnection (QString host, quint16 port, QObject* parent) :
 	QObject (parent),
-	m_host (host),
-	m_port (port),
-	m_state (EDisconnected),
+	m_Hostname (host),
+	m_Port (port),
+	m_State (EDisconnected),
 	m_socket (new QTcpSocket (this)),
 	m_timer (new QTimer)
 {
 	Context* context = new Context (this);
-	win->AddContext (context);
-	set_context (context);
-	connect (m_timer, SIGNAL (timeout()), this, SLOT (Tick()));
-	connect (m_socket, SIGNAL(readyRead()), this, SLOT (ReadyRead()));
+	win->addContext (context);
+	setContext (context);
+	connect (m_timer, SIGNAL (timeout()), this, SLOT (tick()));
+	connect (m_socket, SIGNAL(readyRead()), this, SLOT (readyRead()));
 	g_connections << this;
 
 	IRCChannel* chan = new IRCChannel (this, "#argho");
@@ -59,7 +59,7 @@ IRCConnection::~IRCConnection()
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::Tick() {}
+void IRCConnection::tick() {}
 
 // =============================================================================
 // -----------------------------------------------------------------------------
@@ -70,73 +70,73 @@ void IRCConnection::write (QString text)
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::login()
-{	write (fmt ("USER %1 * * :%2\n", user(), name()));
-	write (fmt ("NICK %1\n", nick()));
-	set_state (ERegistering);
-	Print (fmt (tr ("Registering as \\b%1:%2:%3...\n"), nick(), user(), name()));
+void IRCConnection::writeLogin()
+{	write (fmt ("USER %1 * * :%2\n", getUser(), getName()));
+	write (fmt ("NICK %1\n", getNick()));
+	setState (ERegistering);
+	print (fmt (tr ("Registering as \\b%1:%2:%3...\n"), getNick(), getUser(), getName()));
 	disconnect (m_socket, SIGNAL (connected()));
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::start()
-{	m_socket->connectToHost (host(), port());
+void IRCConnection::connectToServer()
+{	m_socket->connectToHost (getHostname(), getPort());
 	m_timer->start (100);
-	set_state (EConnecting);
-	Print (fmt (tr ("Connecting \\rto\\r \\b%1:%2\\o...\n"), host(), port()));
-	connect (m_socket, SIGNAL (connected()), this, SLOT (login()));
+	setState (EConnecting);
+	print (fmt (tr ("Connecting \\rto\\r \\b%1:%2\\o...\n"), getHostname(), getPort()));
+	connect (m_socket, SIGNAL (connected()), this, SLOT (writeLogin()));
 	connect (m_socket, SIGNAL (error (QAbstractSocket::SocketError)),
-		this, SLOT (ConnectionError (QAbstractSocket::SocketError)));
+		this, SLOT (processConnectionError (QAbstractSocket::SocketError)));
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::stop (QString quitmessage)
+void IRCConnection::disconnectFromServer (QString quitmessage)
 {	if (quitmessage.isEmpty())
 		quitmessage = cfg::quitmessage;
 
-	if (state() == EConnected)
+	if (getState() == EConnected)
 		write (fmt ("QUIT :%1\n", quitmessage));
 
 	m_socket->disconnectFromHost();
 	m_timer->stop();
-	set_state (EDisconnected);
+	setState (EDisconnected);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::Print (QString msg, bool allow_internals)
-{	context()->Print (msg, allow_internals);
+void IRCConnection::print (QString msg, bool allow_internals)
+{	getContext()->print (msg, allow_internals);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::ReadyRead() // [slot]
-{	QString data = QString (m_socket->readAll());
+void IRCConnection::readyRead() // [slot]
+{	QString data = getLinework() + QString (m_socket->readAll());
 	QStringList datalist = data.split ("\n", QString::SkipEmptyParts);
 
 	for (auto it = datalist.begin(); it < datalist.end() - 1; ++it)
-		Incoming (*it);
+		processMessage (*it);
 
 	if (datalist.size() > 1)
-		m_linework = *(datalist.end() - 1);
+		setLinework (*(datalist.end() - 1));
 	else
-		m_linework += data;
+		setLinework (getLinework() + data);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::ConnectionError (QAbstractSocket::SocketError err) // [slot]
+void IRCConnection::processConnectionError (QAbstractSocket::SocketError err) // [slot]
 {	(void) err;
 
-	Print (fmt ("\\b\\c4Connection error: %1\n", m_socket->errorString ()));
-	set_state (EDisconnected);
+	print (fmt ("\\b\\c4Connection error: %1\n", m_socket->errorString ()));
+	setState (EDisconnected);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::Incoming (QString msg)
+void IRCConnection::processMessage (QString msg)
 {	log ("-> %1\n", msg);
 	QStringList tokens = msg.split (" ", QString::SkipEmptyParts);
 
@@ -151,7 +151,7 @@ void IRCConnection::Incoming (QString msg)
 		int num = numstr.toInt (&ok);
 
 		if (ok)
-		{	ParseNumeric (msg, tokens, num);
+		{	parseNumeric (msg, tokens, num);
 			return;
 		}
 	}
@@ -159,11 +159,11 @@ void IRCConnection::Incoming (QString msg)
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::ParseNumeric (QString msg, QStringList tokens, int num)
+void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 {	switch (num)
 	{	case ERplWelcome:
-			set_state (EConnected);
-			Print ("\\b\\c3Connected!\n");
+			setState (EConnected);
+			print ("\\b\\c3Connected!\n");
 		case ERplYourHost:
 		case ERplCreated:
 		case ERplMotdStart:
@@ -174,7 +174,13 @@ void IRCConnection::ParseNumeric (QString msg, QStringList tokens, int num)
 			if (msg[0] == QChar (':'))
 				msg.remove (0, 1);
 
-			Print (fmt ("%1\n", msg));
+			print (fmt ("%1\n", msg));
 		} break;
 	}
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+const QList<IRCConnection*>& IRCConnection::getAllConnections()
+{	return g_connections;
 }

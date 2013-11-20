@@ -4,16 +4,16 @@
 // =============================================================================
 // -----------------------------------------------------------------------------
 QString formatString (const std::initializer_list<StringFormatArg>& args)
-{	QString text = args.begin()->text();
+{	QString text = args.begin()->getText();
 
 	for (auto it = args.begin() + 1; it != args.end(); ++it)
-		text = text.arg (it->text());
+		text = text.arg (it->getText());
 
 	return text;
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void log_to (FILE* fp, QString a)
-{	fprintf (fp, "%s", a.toStdString().c_str());
+void logTo (FILE* fp, QString a)
+{	fprintf (fp, "%s", a.toUtf8().constData());
 }

@@ -16,34 +16,26 @@ class IRCUser
 
 		Q_DECLARE_FLAGS (Flags, Flag)
 
-	PROPERTY (public,  QString,            nick)
-	PROPERTY (public,  QString,            user)
-	PROPERTY (public,  QString,            host)
-	PROPERTY (public,  QString,            name)
-	PROPERTY (public,  QString,            server)
-	PROPERTY (public,  QString,            account)
-	PROPERTY (public,  Flags,              flags)
-	PROPERTY (public,  Context*,        context)
-	PROPERTY (private, IRCConnection*,     connection)
-	PROPERTY (private, QList<IRCChannel*>, channels) 
+	NEW_PROPERTY (public,  QString,					Nickname)
+	NEW_PROPERTY (public,  QString,					Username)
+	NEW_PROPERTY (public,  QString,					Hostname)
+	NEW_PROPERTY (public,  QString,					Realname)
+	NEW_PROPERTY (public,  QString,					Server)
+	NEW_PROPERTY (public,  Flags,						Flags)
+	NEW_PROPERTY (public,  Context*,					Context)
+	NEW_PROPERTY (private, IRCConnection*,			Connection)
+	NEW_PROPERTY (private, QList<IRCChannel*>,	Channels) 
 
 	public:
 		IRCUser (IRCConnection* conn) :
-			m_flags (0),
-			m_connection (conn) {}
+			m_Flags (0),
+			m_Connection (conn) {}
 
-		void               add_known_channel (IRCChannel* chan);
-		IRCChannel::Status channel_status (IRCChannel* chan);
-		void               del_known_channel (IRCChannel* chan);
-		QString            string_rep() const;
-		QString            userhost() const;
-
-		Flags operator| (Flags f) const;
-		Flags operator& (Flags f) const;
-		Flags operator^ (Flags f) const;
-		IRCUser operator|= (Flags f);
-		IRCUser operator&= (Flags f);
-		IRCUser operator^= (Flags f);
+		void               	addKnownChannel (IRCChannel* chan);
+		IRCChannel::EStatus	getStatusInChannel (IRCChannel* chan);
+		void        			dropKnownChannel (IRCChannel* chan);
+		QString					getStringRep() const;
+		QString					getUserhost() const;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS (IRCUser::Flags)

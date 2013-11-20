@@ -12,34 +12,33 @@
 #include "user.h"
 
 #define CALIBRATE_ACTION(NAME) \
-	connect (m_ui->action##NAME, SIGNAL (triggered()), this, SLOT (Action##NAME()));
+	connect (m_ui->action##NAME, SIGNAL (triggered()), this, SLOT (action##NAME()));
 
 MainWindow* win = null;
 QTextDocument blank_document;
 
-CONFIG (String, quicklaunch_nick, "")
-CONFIG (String, quicklaunch_server, "")
-CONFIG (Int,    quicklaunch_port, 6667)
-CONFIG (String, output_font, "")
-CONFIG (Int,    output_font_size, 0)
+CONFIG (String,	quicklaunch_nick, "")
+CONFIG (String,	quicklaunch_server, "")
+CONFIG (Int,		quicklaunch_port, 6667)
+CONFIG (Font,		output_font, QFont())
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-MainWindow::MainWindow(QWidget* parent, Qt::WindowFlags flags) :
+MainWindow::MainWindow (QWidget* parent, Qt::WindowFlags flags) :
 	QMainWindow (parent, flags),
 	m_ui (new Ui_MainWindow)
 {
 	m_ui->setupUi (this);
 	win = this;
-	UpdateWindowTitle();
+	updateWindowTitle();
 
 	CALIBRATE_ACTION (ConnectTo)
 	CALIBRATE_ACTION (Disconnect)
 	CALIBRATE_ACTION (Quit)
 
 	connect (m_ui->m_channels, SIGNAL (currentItemChanged (QTreeWidgetItem*, QTreeWidgetItem*)),
-		this, SLOT (ContextSelected (QTreeWidgetItem*)));
-	connect (m_ui->m_input, SIGNAL (returnPressed()), this, SLOT (InputEnterPressed()));
+		this, SLOT (contextSelected (QTreeWidgetItem*)));
+	connect (m_ui->m_input, SIGNAL (returnPressed()), this, SLOT (inputEnterPressed()));
 
 	m_ui->m_output->setFontFamily ("Monospace");
 	m_ui->m_output->setFontPointSize (11);
@@ -53,14 +52,14 @@ MainWindow::~MainWindow()
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void MainWindow::UpdateWindowTitle()
+void MainWindow::updateWindowTitle()
 {	QString title = fmt (APPNAME " %1", version_string());
 	setWindowTitle (title);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void MainWindow::ActionConnectTo()
+void MainWindow::actionConnectTo()
 {	QDialog* dlg = new QDialog (this);
 	Ui_ConnectTo ui;
 	ui.setupUi (dlg);
@@ -76,38 +75,38 @@ void MainWindow::ActionConnectTo()
 	cfg::quicklaunch_port = ui.m_port->value();
 
 	IRCConnection* conn = new IRCConnection (ui.m_host->text(), ui.m_port->value());
-	conn->set_nick (ui.m_nick->text());
-	conn->set_user (conn->nick());
-	conn->set_name (conn->nick());
-	conn->start();
+	conn->setNick (ui.m_nick->text());
+	conn->setUser (conn->getNick());
+	conn->setName (conn->getNick());
+	conn->connectToServer();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void MainWindow::ActionDisconnect()
-{	Context* ctx = Context::CurrentContext();
-	ctx->GetConnection()->stop();
+void MainWindow::actionDisconnect()
+{	Context* ctx = Context::getCurrentContext();
+	ctx->getConnection()->disconnectFromServer();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void MainWindow::ActionQuit()
+void MainWindow::actionQuit()
 {	exit (0);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void MainWindow::AddContext (Context* a)
-{	m_ui->m_channels->addTopLevelItem (a->treeitem());
-	a->treeitem()->setExpanded (true);
+void MainWindow::addContext (Context* a)
+{	m_ui->m_channels->addTopLevelItem (a->getTreeItem());
+	a->getTreeItem()->setExpanded (true);
 	a->UpdateTreeItem();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void MainWindow::RemoveContext (Context* a)
-{	delete a->treeitem();
-	a->set_treeitem (null);
+void MainWindow::removeContext (Context* a)
+{	delete a->getTreeItem();
+	a->setTreeItem (null);
 }
 
 // =============================================================================
@@ -115,8 +114,8 @@ void MainWindow::RemoveContext (Context* a)
 void MainWindow::closeEvent (QCloseEvent* ev)
 {	int numactive = 0;
 
-	for (Context* c : Context::all_contexts())
-		if (c->Type() == Context::EServerContext && c->GetConnection()->state() == IRCConnection::EConnected)
+	for (IRCConnection* conn : IRCConnection::getAllConnections())
+		if (conn->getState() != IRCConnection::EDisconnected)
 			numactive++;
 
 	if (numactive > 0)
@@ -128,8 +127,8 @@ void MainWindow::closeEvent (QCloseEvent* ev)
 		}
 	}
 
-	for (Context* c : Context::all_contexts())
-		c->GetConnection()->stop();
+	for (Context* c : Context::getAllContexts())
+		c->getConnection()->disconnectFromServer();
 
 	Config::SaveTo (configname);
 	ev->accept();
@@ -137,42 +136,42 @@ void MainWindow::closeEvent (QCloseEvent* ev)
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void MainWindow::UpdateOutputWidget()
-{	Context* context = Context::CurrentContext();
+void MainWindow::updateOutputWidget()
+{	Context* context = Context::getCurrentContext();
 	m_ui->m_output->setEnabled (context != null);
 
 	if (context)
-		m_ui->m_output->setDocument (context->document());
+		m_ui->m_output->setDocument (context->getDocument());
 	else
 		m_ui->m_output->setDocument (&blank_document);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void MainWindow::ContextSelected (QTreeWidgetItem* item)
-{	Context::SetCurrentContext (Context::FromTreeWidgetItem (item));
+void MainWindow::contextSelected (QTreeWidgetItem* item)
+{	Context::setCurrentContext (Context::getFromTreeWidgetItem (item));
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 void MainWindow::keyPressEvent (QKeyEvent* ev)
-{	SetCtrlPressed (ev->modifiers() & Qt::ControlModifier);
+{	setCtrlPressed (ev->modifiers() & Qt::ControlModifier);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 void MainWindow::keyReleaseEvent (QKeyEvent* ev)
-{	SetCtrlPressed (ev->modifiers() & Qt::ControlModifier);
+{	setCtrlPressed (ev->modifiers() & Qt::ControlModifier);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void MainWindow::InputEnterPressed() // [slot]
+void MainWindow::inputEnterPressed() // [slot]
 {	QString input = m_ui->m_input->text();
-	Context* context = Context::CurrentContext();
-	IRCConnection* conn = context->GetConnection();
+	Context* context = Context::getCurrentContext();
+	IRCConnection* conn = context->getConnection();
 
-	if (input.isEmpty() && !CtrlPressed())
+	if (input.isEmpty() && !getCtrlPressed())
 		return;
 
 	// Remove the message from the input field
@@ -189,7 +188,7 @@ void MainWindow::InputEnterPressed() // [slot]
 			{	try
 				{	(*g_Commands[i].func) (args, &g_Commands[i]);
 				} catch (CommandError& err)
-				{	Context::CurrentContext()->Print (fmt (tr ("\\b\\c4Error: %1\n"), err.what()), true);
+				{	Context::getCurrentContext()->print (fmt (tr ("\\b\\c4Error: %1\n"), err.what()), true);
 				}
 
 				return;
@@ -197,22 +196,22 @@ void MainWindow::InputEnterPressed() // [slot]
 		}
 
 		// No command matched, send as raw
-		Context::CurrentContext()->Print (fmt ("-> raw: %1\n", input), true);
+		Context::getCurrentContext()->print (fmt ("-> raw: %1\n", input), true);
 		conn->write (input + "\n");
 		return;
 	}
 
-	switch (context->Type())
+	switch (context->getType())
 	{	case Context::EServerContext:
 		{	conn->write (input + "\n");
 		} break;
 
 		case Context::EChannelContext:
-		{	conn->write (fmt ("PRIVMSG %1 :%2\n", context->Target().chan->name(), input));
+		{	conn->write (fmt ("PRIVMSG %1 :%2\n", context->getTarget().chan->getName(), input));
 		} break;
 
 		case Context::EQueryContext:
-		{	conn->write (fmt ("PRIVMSG %1 :%2\n", context->Target().user->nick(), input));
+		{	conn->write (fmt ("PRIVMSG %1 :%2\n", context->getTarget().user->getNickname(), input));
 		} break;
 	}
 }

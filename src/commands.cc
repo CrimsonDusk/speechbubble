@@ -30,14 +30,14 @@ static void CheckParms (int minparms, int maxparms, QString parmusage,
 
 // ============================================================================
 // ----------------------------------------------------------------------------
-static inline void WriteRaw (QString text)
-{	CurrentConnection()->write (text);
+static inline IRCConnection* CurrentConnection()
+{	return Context::getCurrentContext()->getConnection();
 }
 
 // ============================================================================
 // ----------------------------------------------------------------------------
-static inline IRCConnection* CurrentConnection()
-{	return Context::CurrentContext()->GetConnection();
+static inline void WriteRaw (QString text)
+{	CurrentConnection()->write (text);
 }
 
 // ============================================================================

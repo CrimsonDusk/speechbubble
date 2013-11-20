@@ -18,16 +18,16 @@ class MainWindow : public QMainWindow
 		explicit MainWindow (QWidget* parent = 0, Qt::WindowFlags flags = 0);
 		virtual ~MainWindow();
 
-		void AddContext (Context* a);
-		void RemoveContext (Context* a);
-		void UpdateOutputWidget();
+		void addContext (Context* a);
+		void removeContext (Context* a);
+		void updateOutputWidget();
 
 	public slots:
-		void ActionConnectTo();
-		void ActionDisconnect();
-		void ActionQuit();
-		void ContextSelected (QTreeWidgetItem* item);
-		void InputEnterPressed();
+		void actionConnectTo();
+		void actionDisconnect();
+		void actionQuit();
+		void contextSelected (QTreeWidgetItem* item);
+		void inputEnterPressed();
 
 	protected:
 		void closeEvent (QCloseEvent* ev);
@@ -37,7 +37,7 @@ class MainWindow : public QMainWindow
 	private:
 		Ui_MainWindow* m_ui;
 
-		void UpdateWindowTitle();
+		void updateWindowTitle();
 };
 
 extern MainWindow* win;

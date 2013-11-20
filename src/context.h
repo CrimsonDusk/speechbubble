@@ -19,18 +19,20 @@ class QTextDocument;
 // =============================================================================
 // -----------------------------------------------------------------------------
 class IRCContextTreeWidgetItem : public QTreeWidgetItem
-{	PROPERTY (public, Context*, context)
+{	NEW_PROPERTY (public, Context*, Context)
 
 	public:
 		IRCContextTreeWidgetItem (Context* context) :
 			QTreeWidgetItem ((QTreeWidgetItem*) null),
-			m_context (context) {}
+			m_Context (context) {}
 };
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 class Context final : public QObject
-{	public:
+{	DELETE_COPY (Context)
+
+	public:
 		enum ContextType
 		{	EChannelContext,
 			EQueryContext,
@@ -43,9 +45,9 @@ class Context final : public QObject
 			IRCUser* user;
 		};
 
-	PROPERTY (public,  IRCContextTreeWidgetItem*,	treeitem)
-	PROPERTY (public,  QTextDocument*,					document)
-	PROPERTY (private, QList<Context*>,					subcontexts)
+	NEW_PROPERTY (public,  IRCContextTreeWidgetItem*,	TreeItem)
+	NEW_PROPERTY (public,  QTextDocument*,					Document)
+	NEW_PROPERTY (private, QList<Context*>,				Subcontexts)
 	NEW_PROPERTY (private, Context*,							Parent)
 	NEW_PROPERTY (private, TargetUnion,						Target)
 	NEW_PROPERTY (private, ContextType,						Type)
@@ -58,18 +60,18 @@ class Context final : public QObject
 		Context (IRCUser* user);
 		~Context();
 
-		void				AddSubContext (Context* child);
-		void				forget_subcontext (Context* child);
+		void				addSubContext (Context* child);
+		void				forgetSubContext (Context* child);
 		void				UpdateTreeItem();
-		IRCConnection*	GetConnection();
-		QString			GetName() const;
-		void				Print (QString text, bool allow_internals);
-		void				WriteIRCMessage (QString from, QString msg);
+		IRCConnection*	getConnection();
+		QString			getName() const;
+		void				print (QString text, bool allow_internals);
+		void				writeIRCMessage (QString from, QString msg);
 
-		static const list<Context*>& all_contexts();
-		static Context* FromTreeWidgetItem (QTreeWidgetItem* item);
-		static Context* CurrentContext();
-		static void SetCurrentContext (Context* context);
+		static const list<Context*>& getAllContexts();
+		static Context* getFromTreeWidgetItem (QTreeWidgetItem* item);
+		static Context* getCurrentContext();
+		static void setCurrentContext (Context* context);
 
 	private:
 		void CommonInit();

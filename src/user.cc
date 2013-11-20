@@ -5,69 +5,30 @@
 // =============================================================================
 // Determine status level of this user.
 // -----------------------------------------------------------------------------
-IRCChannel::Status IRCUser::channel_status (IRCChannel* chan)
-{	return chan->EffectiveStatusOf (this);
+IRCChannel::EStatus IRCUser::getStatusInChannel (IRCChannel* chan)
+{	return chan->getEffectiveStatusOf (this);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-QString IRCUser::userhost() const
-{	return fmt ("%1!%2@%3", nick(), user(), host());
+QString IRCUser::getUserhost() const
+{	return fmt ("%1!%2@%3", getNickname(), getUsername(), getHostname());
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-IRCUser::Flags IRCUser::operator| (Flags f) const
-{	return flags() | f;
+QString IRCUser::getStringRep() const
+{	return fmt ("%1 (%2@%3)", getNickname(), getUsername(), getHostname());
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-IRCUser IRCUser::operator|= (Flags f)
-{	set_flags (flags() | f);
-	return *this;
+void IRCUser::addKnownChannel (IRCChannel* chan)
+{	m_Channels << chan;
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-IRCUser::Flags IRCUser::operator& (Flags f) const
-{	return flags() & f;
-}
-
-// =============================================================================
-// -----------------------------------------------------------------------------
-IRCUser IRCUser::operator&= (Flags f)
-{	set_flags (flags() & f);
-	return *this;
-}
-
-// =============================================================================
-// -----------------------------------------------------------------------------
-IRCUser::Flags IRCUser::operator^ (Flags f) const
-{	return flags() ^ f;
-}
-
-// =============================================================================
-// -----------------------------------------------------------------------------
-IRCUser IRCUser::operator^= (Flags f)
-{	set_flags (flags() ^ f);
-	return *this;
-}
-
-// =============================================================================
-// -----------------------------------------------------------------------------
-QString IRCUser::string_rep() const
-{	return fmt ("%1 (%2@%3)", nick(), user(), host());
-}
-
-// =============================================================================
-// -----------------------------------------------------------------------------
-void IRCUser::add_known_channel (IRCChannel* chan)
-{	m_channels << chan;
-}
-
-// =============================================================================
-// -----------------------------------------------------------------------------
-void IRCUser::del_known_channel (IRCChannel* chan)
-{	m_channels.removeOne (chan);
+void IRCUser::dropKnownChannel (IRCChannel* chan)
+{	m_Channels.removeOne (chan);
 }

@@ -3,7 +3,7 @@
 #include "main.h"
 #include "mainwindow.h"
 #include "config.h"
-#include "xml.h"
+#include "xml_document.h"
 #include "crashcatcher.h"
 #include "context.h"
 
@@ -16,12 +16,12 @@ int main (int argc, char* argv[])
 	init_crash_catcher();
 
 	if (!Config::Load (configname))
-	{	flog (stderr, "unable to load %1: %2\n", configname, XMLDocument::GetParseError());
+	{	flog (stderr, "unable to load %1: %2\n", configname, XMLDocument::getParseError());
 		return 1;
 	}
 
 	(new MainWindow)->show();
-	Context::SetCurrentContext (null);
+	Context::setCurrentContext (null);
 	app.exec();
 }
 

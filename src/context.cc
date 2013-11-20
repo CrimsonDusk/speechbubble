@@ -7,8 +7,7 @@
 #include <QTreeWidget>
 #include <typeinfo>
 
-static const int g_num_html_colors = 16;
-static const QString g_html_colors[g_num_html_colors] =
+static const QString g_HTMLColors[] =
 {	"#FFFFFF", // white
 	"#000000", // black
 	"#0000A0", // dark blue
@@ -26,13 +25,15 @@ static const QString g_html_colors[g_num_html_colors] =
 	"#404040", // dark gray
 };
 
+static const int g_NumHTMLColors = (sizeof g_HTMLColors / sizeof *g_HTMLColors);
+
 // =============================================================================
 // -----------------------------------------------------------------------------
-static void WriteColors (QString& out, QString color_1, QString color_2)
-{	if (!color_2.isEmpty())
-	out += fmt ("<span style=\"color: %1; background-color: %2;\">", color_1, color_2);
+static void WriteColors (QString& out, QString color1, QString color2)
+{	if (!color2.isEmpty())
+	out += fmt ("<span style=\"color: %1; background-color: %2;\">", color1, color2);
 	else
-		out += fmt ("<span style=\"color: %1;\">", color_1);
+		out += fmt ("<span style=\"color: %1;\">", color1);
 }
 
 // =============================================================================
@@ -40,12 +41,12 @@ static void WriteColors (QString& out, QString color_1, QString color_2)
 // set, special sequences are also replaced (e.g. "\\b" with bold)
 // -----------------------------------------------------------------------------
 static QString ConvertToHTML (QString in, bool allow_internals)
-{	QString			color_1,
-						color_2;
-	bool				bold_active = false;
-	const QRegExp	color_mask ("(\\d\\d?)(;\\d\\d?)?"); // regex for colors, e.g. 4;12
+{	QString			color1,
+						color2;
+	bool				boldactive = false;
+	const QRegExp	colormask ("(\\d\\d?)(;\\d\\d?)?"); // regex for colors, e.g. 4;12
 	QString			out;
-	bool				underline_active = false;
+	bool				underlineactive = false;
 
 	// The string more than most probably does not end with a normalizer character,
 	// so append one now. This ensures all tags are closed properly and nothing will
@@ -75,28 +76,28 @@ static QString ConvertToHTML (QString in, bool allow_internals)
 	for (int i = 0; i < in.size(); ++i)
 	{	switch (in[i].toAscii())
 		{	case BOLD_CHAR:
-			{	toggle (bold_active);
+			{	toggle (boldactive);
 
-				if (bold_active)
+				if (boldactive)
 					out += "<b>";
 				else
 					out += "</b>";
 			} break;
 
 			case UNDERLINE_CHAR:
-			{	toggle (underline_active);
+			{	toggle (underlineactive);
 
-				if (underline_active)
+				if (underlineactive)
 					out += "<u>";
 				else
 					out += "</u>";
 			} break;
 
 			case COLOR_CHAR:
-			{	if (color_mask.indexIn (in.mid (i + 1)) != -1)
-				{	assert (color_mask.capturedTexts().size() == 3);
-					QString	num1str = color_mask.capturedTexts()[1],
-								num2str = color_mask.capturedTexts()[2];
+			{	if (colormask.indexIn (in.mid (i + 1)) != -1)
+				{	assert (colormask.capturedTexts().size() == 3);
+					QString	num1str = colormask.capturedTexts()[1],
+								num2str = colormask.capturedTexts()[2];
 					int		num1,
 								num2 = -1;
 
@@ -115,48 +116,48 @@ static QString ConvertToHTML (QString in, bool allow_internals)
 						assert (num2 != -1);
 					}
 
-					if (within_range (num1, 0, 15) && within_range (num2, -1, 15))
-					{	color_1 = g_html_colors[num1];
-						color_2 = (num2 != -1) ? g_html_colors[num2] : "";
+					if (within_range (num1, 0, g_NumHTMLColors - 1) && within_range (num2, -1, g_NumHTMLColors - 1))
+					{	color1 = g_HTMLColors[num1];
+						color2 = (num2 != -1) ? g_HTMLColors[num2] : "";
 
-						WriteColors (out, color_1, color_2);
-						i += color_mask.matchedLength();
+						WriteColors (out, color1, color2);
+						i += colormask.matchedLength();
 					}
 				}
-				elif (!color_1.isEmpty())
+				elif (!color1.isEmpty())
 				{	out += "</span>";
-					color_1 = color_2 = "";
+					color1 = color2 = "";
 				}
 			} break;
 
 			case NORMAL_CHAR:
-			{	if (bold_active)
+			{	if (boldactive)
 				{	out += "</b>";
-					bold_active = false;
+					boldactive = false;
 				}
 
-				if (underline_active)
+				if (underlineactive)
 				{	out += "</u>";
-					underline_active = false;
+					underlineactive = false;
 				}
 
-				if (!color_1.isEmpty())
+				if (!color1.isEmpty())
 				{	out += "</span>";
-					color_1 = color_2 = "";
+					color1 = color2 = "";
 				}
 			} break;
 
 			case REVERSE_CHAR:
-			{	if (color_1.isEmpty())
-					color_1 = g_html_colors[0];
+			{	if (color1.isEmpty())
+					color1 = g_HTMLColors[0];
 				else
 					out += "</span>";
 
-				if (color_2.isEmpty())
-					color_2 = g_html_colors[1];
+				if (color2.isEmpty())
+					color2 = g_HTMLColors[1];
 
-				color_1.swap (color_2);
-				WriteColors (out, color_1, color_2);
+				color1.swap (color2);
+				WriteColors (out, color1, color2);
 			} break;
 
 			// for internal use:
@@ -173,19 +174,19 @@ static QString ConvertToHTML (QString in, bool allow_internals)
 	return out;
 }
 
-Context* g_current_context = null;
-static QList<Context*> g_contexts;
-static QMap<int, Context*> g_contexts_by_id;
+Context* g_CurrentContext = null;
+static QList<Context*> g_AllContexts;
+static QMap<int, Context*> g_ContextsByID;
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 Context::Context (IRCConnection* conn) : QObject(), m_Type (EServerContext)
 {	TargetUnion u;
 	u.conn = conn;
-	SetTarget (u);
-	SetParent (null);
+	setTarget (u);
+	setParent (null);
 	CommonInit();
-	win->AddContext (this);
+	win->addContext (this);
 }
 
 // =============================================================================
@@ -193,8 +194,8 @@ Context::Context (IRCConnection* conn) : QObject(), m_Type (EServerContext)
 Context::Context (IRCChannel* channel) : QObject(), m_Type (EChannelContext)
 {	TargetUnion u;
 	u.chan = channel;
-	SetTarget (u);
-	SetParent (channel->connection()->context());
+	setTarget (u);
+	setParent (channel->getConnection()->getContext());
 	CommonInit();
 }
 
@@ -203,77 +204,77 @@ Context::Context (IRCChannel* channel) : QObject(), m_Type (EChannelContext)
 Context::Context (IRCUser* user) : QObject(), m_Type (EQueryContext)
 {	TargetUnion u;
 	u.user = user;
-	SetTarget (u);
-	SetParent (user->connection()->context());
+	setTarget (u);
+	setParent (user->getConnection()->getContext());
 	CommonInit();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 void Context::CommonInit()
-{	SetID (1);
-	while (g_contexts_by_id.find (ID()) != g_contexts_by_id.end())
-		SetID (ID() + 1);
+{	setID (1);
+	while (g_ContextsByID.find (getID()) != g_ContextsByID.end())
+		setID (getID() + 1);
 
-	set_treeitem (new IRCContextTreeWidgetItem (this));
-	set_document (new QTextDocument);
+	setTreeItem (new IRCContextTreeWidgetItem (this));
+	setDocument (new QTextDocument);
 
-	if (Parent())
-		Parent()->AddSubContext (this);
+	if (getParent())
+		getParent()->addSubContext (this);
 
-	g_contexts << this;
-	g_contexts_by_id[ID()] = this;
+	g_AllContexts << this;
+	g_ContextsByID[getID()] = this;
 
 	/*
 	log ("initialized context with id %1 (parent: %2)\n",
-		ID(), parent() ? QString::number (parent()->ID()) : "none");
+		getID(), parent() ? QString::number (parent()->getID()) : "none");
 	*/
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 Context::~Context()
-{	if (Parent())
-		Parent()->forget_subcontext (this);
+{	if (getParent())
+		getParent()->forgetSubContext (this);
 
-	g_contexts.removeOne (this);
-	g_contexts_by_id.remove (ID());
-	delete treeitem();
+	g_AllContexts.removeOne (this);
+	g_ContextsByID.remove (getID());
+	delete getTreeItem();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-const QList<Context*>& Context::all_contexts() // [static]
-{	return g_contexts;
+const QList<Context*>& Context::getAllContexts() // [static]
+{	return g_AllContexts;
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 void Context::UpdateTreeItem()
-{	treeitem()->setText (0, GetName());
+{	getTreeItem()->setText (0, getName());
 
-	for (Context* sub : subcontexts())
+	for (Context* sub : getSubcontexts())
 		sub->UpdateTreeItem();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::AddSubContext (Context* child)
-{	m_subcontexts << child;
-	child->SetParent (this);
-	treeitem()->addChild (child->treeitem());
+void Context::addSubContext (Context* child)
+{	m_Subcontexts << child;
+	child->setParent (this);
+	getTreeItem()->addChild (child->getTreeItem());
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::forget_subcontext (Context* child)
-{	m_subcontexts.removeOne (child);
-	child->SetParent (null);
+void Context::forgetSubContext (Context* child)
+{	m_Subcontexts.removeOne (child);
+	child->setParent (null);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-Context* Context::FromTreeWidgetItem (QTreeWidgetItem* item)
+Context* Context::getFromTreeWidgetItem (QTreeWidgetItem* item)
 {	IRCContextTreeWidgetItem* subitem;
 
 #ifndef RELEASE
@@ -283,36 +284,36 @@ Context* Context::FromTreeWidgetItem (QTreeWidgetItem* item)
 	subitem = reinterpret_cast<IRCContextTreeWidgetItem*> (item);
 #endif
 
-	return subitem->context();
+	return subitem->getContext();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-Context* Context::CurrentContext()
-{	return g_current_context;
+Context* Context::getCurrentContext() // [static]
+{	return g_CurrentContext;
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::SetCurrentContext (Context* context)
-{	g_current_context = context;
-	win->UpdateOutputWidget();
+void Context::setCurrentContext (Context* context) // [static]
+{	g_CurrentContext = context;
+	win->updateOutputWidget();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-QString Context::GetName() const
-{	switch (Type())
+QString Context::getName() const
+{	switch (getType())
 	{	case EChannelContext:
-		{	return Target().chan->name();
+		{	return getTarget().chan->getName();
 		} break;
 
 		case EQueryContext:
-		{	return Target().user->nick();
+		{	return getTarget().user->getNickname();
 		} break;
 
 		case EServerContext:
-		{	return Target().conn->host();
+		{	return getTarget().conn->getHostname();
 		} break;
 	}
 
@@ -321,25 +322,25 @@ QString Context::GetName() const
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::Print (QString text, bool allow_internals)
-{	SetHTML (HTML() + ConvertToHTML (text, allow_internals));
-	m_document->setHtml (HTML());
+void Context::print (QString text, bool allow_internals)
+{	setHTML (getHTML() + ConvertToHTML (text, allow_internals));
+	getDocument()->setHtml (getHTML());
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-IRCConnection* Context::GetConnection()
-{	switch (Type())
+IRCConnection* Context::getConnection()
+{	switch (getType())
 	{	case EQueryContext:
-		{	return Target().user->connection();
+		{	return getTarget().user->getConnection();
 		} break;
 
 		case EChannelContext:
-		{	return Target().chan->connection();
+		{	return getTarget().chan->getConnection();
 		} break;
 
 		case EServerContext:
-		{	return Target().conn;
+		{	return getTarget().conn;
 		} break;
 	}
 
@@ -348,7 +349,7 @@ IRCConnection* Context::GetConnection()
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::WriteIRCMessage (QString from, QString msg)
-{	Print (fmt ("[%1] <\\b%2\\b> %3\n",
+void Context::writeIRCMessage (QString from, QString msg)
+{	print (fmt ("[%1] <\\b%2\\b> %3\n",
 		QTime::currentTime().toString (Qt::TextDate), from, msg), false);
 }
