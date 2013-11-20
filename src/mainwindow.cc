@@ -53,7 +53,7 @@ MainWindow::~MainWindow()
 // =============================================================================
 // -----------------------------------------------------------------------------
 void MainWindow::updateWindowTitle()
-{	QString title = fmt (APPNAME " %1", version_string());
+{	QString title = fmt (APPNAME " %1", getVersionString());
 	setWindowTitle (title);
 }
 
@@ -97,9 +97,10 @@ void MainWindow::actionQuit()
 // =============================================================================
 // -----------------------------------------------------------------------------
 void MainWindow::addContext (Context* a)
-{	m_ui->m_channels->addTopLevelItem (a->getTreeItem());
+{	log ("Add context #%1 as top-level item\n", a->getID());
+	m_ui->m_channels->addTopLevelItem (a->getTreeItem());
 	a->getTreeItem()->setExpanded (true);
-	a->UpdateTreeItem();
+	a->updateTreeItem();
 }
 
 // =============================================================================

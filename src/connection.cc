@@ -12,14 +12,15 @@ CONFIG (String, quitmessage, "Bye.")
 static QList<IRCConnection*> g_connections;
 
 // =============================================================================
-// Joins the indices [@a, @b] of @list
+// Joins the indices [@a, @b] of @list. If @b is not passed, joins indices from
+// @a to end of list.
 // -----------------------------------------------------------------------------
-static str lrange (const QStringList& list, int a, int b = -1)
+static QString lrange (const QStringList& list, int a, int b = -1)
 {	if (b == -1)
 		b = list.size() - 1;
 
 	assert (list.size() > a && list.size() > b && b > a);
-	str out;
+	QString out;
 
 	for (auto it = list.begin() + a; it <= list.begin() + b; ++it)
 	{	if (!out.isEmpty())
@@ -45,7 +46,7 @@ IRCConnection::IRCConnection (QString host, quint16 port, QObject* parent) :
 	win->addContext (context);
 	setContext (context);
 	connect (m_timer, SIGNAL (timeout()), this, SLOT (tick()));
-	connect (m_socket, SIGNAL(readyRead()), this, SLOT (readyRead()));
+	connect (m_socket, SIGNAL (readyRead()), this, SLOT (readyRead()));
 	g_connections << this;
 
 	IRCChannel* chan = new IRCChannel (this, "#argho");
@@ -84,7 +85,7 @@ void IRCConnection::connectToServer()
 {	m_socket->connectToHost (getHostname(), getPort());
 	m_timer->start (100);
 	setState (EConnecting);
-	print (fmt (tr ("Connecting \\rto\\r \\b%1:%2\\o...\n"), getHostname(), getPort()));
+	print (fmt (tr ("Connecting to \\b%1:%2\\o...\n"), getHostname(), getPort()));
 	connect (m_socket, SIGNAL (connected()), this, SLOT (writeLogin()));
 	connect (m_socket, SIGNAL (error (QAbstractSocket::SocketError)),
 		this, SLOT (processConnectionError (QAbstractSocket::SocketError)));
@@ -146,7 +147,7 @@ void IRCConnection::processMessage (QString msg)
 	}
 
 	if (tokens.size() > 1)
-	{	str numstr = tokens[1];
+	{	QString numstr = tokens[1];
 		bool ok;
 		int num = numstr.toInt (&ok);
 
@@ -169,7 +170,7 @@ void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 		case ERplMotdStart:
 		case ERplMotd:
 		case ERplEndOfMotd:
-		{	str msg = lrange (tokens, 3);
+		{	QString msg = lrange (tokens, 3);
 
 			if (msg[0] == QChar (':'))
 				msg.remove (0, 1);

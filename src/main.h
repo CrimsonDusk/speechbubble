@@ -21,11 +21,6 @@
 
 static const std::nullptr_t null = nullptr;
 extern const char* configname;
-typedef QString str;
-
-template<class T> using list = QList<T>;
-template<class T, class R> using map = QMap<T, R>;
-template<class T> using vector = QVector<T>;
 
 #ifdef IN_IDE_PARSER
 # error IN_IDE_PARSER defined - this is for KDevelop workarounds
@@ -44,7 +39,7 @@ template<class T, class R> bool pop (R& list, T& a)
 }
 
 // Checks whether @a is within [@min, @max] inclusive
-template<class T> static inline bool within_range (T a, T min, T max)
+template<class T> static inline bool isWithinRange (T a, T min, T max)
 {	return (a >= min && a <= max);
 }
 
@@ -58,11 +53,11 @@ static inline bool& toggle (bool& a)
 #undef assert
 #endif // assert
 
-QString version_string();
-void assertion_failure (const char* file, int line, const char* funcname, const char* expr); // crashcatcher.cc
+QString getVersionString();
+void assertionFailure (const char* file, int line, const char* funcname, const char* expr); // crashcatcher.cc
 
 #ifndef RELEASE
-# define assert(A) (A) ? (void) 0 : assertion_failure (__FILE__, __LINE__, __PRETTY_FUNCTION__, #A)
+# define assert(A) (A) ? (void) 0 : assertionFailure (__FILE__, __LINE__, __PRETTY_FUNCTION__, #A)
 #else
 # define assert {}
 #endif // RELEASE

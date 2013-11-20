@@ -7,34 +7,34 @@
 #include "main.h"
 
 #define CONFIG(T, NAME, DEFAULT) namespace cfg { Config::T NAME = DEFAULT; } \
-	Config::ConfigAdder zz_ConfigAdder_##NAME (&cfg::NAME, Config::T##Type, \
+	Config::ConfigAdder zz_ConfigAdder_##NAME (&cfg::NAME, Config::E##T, \
 		#NAME, Config::T (DEFAULT));
 
 #define EXTERN_CONFIG(T, NAME) namespace cfg { extern Config::T NAME; }
-#define COBALT_MAX_CONFIG 512
+#define MAX_CONFIG 512
 
 class XMLDocument;
 
 // =========================================================
 namespace Config
-{	enum Type
-	{	IntType,
-		StringType,
-		FloatType,
-		BoolType,
-		IntListType,
-		StringListType,
-		StringMapType,
-		FontType,
+{	enum EDataType
+	{	EInt,
+		EString,
+		EFloat,
+		EBool,
+		EIntList,
+		EStringList,
+		EStringMap,
+		EFont,
 	};
 
 	struct ConfigData
 	{	void* ptr;
-		Type type;
+		EDataType type;
 		const char* name;
 	};
 
-	extern ConfigData g_ConfigData[COBALT_MAX_CONFIG];
+	extern ConfigData g_ConfigData[MAX_CONFIG];
 	extern int g_ConfigDataCursor;
 
 	// Type-definitions for the above enum list
@@ -59,11 +59,11 @@ namespace Config
 			// on the QList's c-tor being called before the configs' c-tors. With global
 			// variables we cannot assume that!! Therefore we need to use a C-style array here.
 			// -----------------------------------------------------------------------------
-			template<class T> ConfigAdder (T* ptr, Type type, const char* name, const T& def)
+			template<class T> ConfigAdder (T* ptr, EDataType type, const char* name, const T& def)
 			{	if (g_ConfigDataCursor == 0)
 				memset (g_ConfigData, 0, sizeof g_ConfigData);
 
-				assert (g_ConfigDataCursor < COBALT_MAX_CONFIG);
+				assert (g_ConfigDataCursor < MAX_CONFIG);
 				ConfigData& i = g_ConfigData[g_ConfigDataCursor++];
 				i.ptr = ptr;
 				i.type = type;

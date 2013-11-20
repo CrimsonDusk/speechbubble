@@ -184,7 +184,7 @@ void IRCChannel::applyModeString (QString text)
 {	bool neg = false;
 	QStringList args = text.split (" ", QString::SkipEmptyParts);
 	uint argidx = 0;
-	str modestring = args[0];
+	QString modestring = args[0];
 	args.erase (0);
 
 	for (char c : modestring.toUtf8())
@@ -205,7 +205,7 @@ void IRCChannel::applyModeString (QString text)
 				continue;
 
 			// All of these require an argument
-			str arg = args.last();
+			QString arg = args.last();
 			args.removeLast();
 
 			Entry* e = findUserByName (arg);
@@ -261,8 +261,8 @@ void IRCChannel::applyModeString (QString text)
 	}
 }
 
-str IRCChannel::getModeString() const
-{	str modestring;
+QString IRCChannel::getModeString() const
+{	QString modestring;
 	QStringList args;
 
 	for (const ChannelMode& mode : m_Modes)

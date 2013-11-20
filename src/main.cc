@@ -13,7 +13,7 @@ const char* configname = UNIXNAME ".xml";
 // -----------------------------------------------------------------------------
 int main (int argc, char* argv[])
 {	QApplication app (argc, argv);
-	init_crash_catcher();
+	initCrashCatcher();
 
 	if (!Config::Load (configname))
 	{	flog (stderr, "unable to load %1: %2\n", configname, XMLDocument::getParseError());
@@ -27,7 +27,7 @@ int main (int argc, char* argv[])
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-QString version_string()
+QString getVersionString()
 {
 #if VERSION_PATCH > 0
 	return fmt ("%1.%2.%3", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);

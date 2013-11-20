@@ -16,7 +16,7 @@
 static bool g_crashCatcherActive = false;
 
 // If an assertion failed, what was it?
-static str g_assertionFailure;
+static QString g_assertionFailure;
 
 // List of signals to catch and crash on
 static QList<int> g_signalsToCatch ({
@@ -28,7 +28,7 @@ static QList<int> g_signalsToCatch ({
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-static void bomb_box (const str& message)
+static void bombBox (const QString& message)
 {	QDialog dlg;
 	Ui_BombBox ui;
 	ui.setupUi (&dlg);
@@ -39,7 +39,7 @@ static void bomb_box (const str& message)
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-static void handle_crash (int sig)
+static void handleCrash (int sig)
 {	printf ("%s: crashed with signal %d, launching gdb\n", __func__, sig);
 
 	if (g_crashCatcherActive)
@@ -54,9 +54,9 @@ static void handle_crash (int sig)
 
 	if (commandsFile.open())
 	{	commandsFile.write (fmt ("attach %1\n", pid).toLocal8Bit());
-		commandsFile.write (str ("backtrace full\n").toLocal8Bit());
-		commandsFile.write (str ("detach\n").toLocal8Bit());
-		commandsFile.write (str ("quit").toLocal8Bit());
+		commandsFile.write (QString ("backtrace full\n").toLocal8Bit());
+		commandsFile.write (QString ("detach\n").toLocal8Bit());
+		commandsFile.write (QString ("quit").toLocal8Bit());
 		commandsFile.flush();
 		commandsFile.close();
 	}
@@ -71,10 +71,10 @@ static void handle_crash (int sig)
 	prctl (PR_SET_PTRACER, proc.pid(), 0, 0, 0);
 
 	proc.waitForFinished (1000);
-	str output = QString (proc.readAllStandardOutput());
-	str err = QString (proc.readAllStandardError());
+	QString output = QString (proc.readAllStandardOutput());
+	QString err = QString (proc.readAllStandardError());
 
-	bomb_box (fmt ("<h3>Program crashed with signal %1</h3>\n\n"
+	bombBox (fmt ("<h3>Program crashed with signal %1</h3>\n\n"
 		"%2"
 		"<p><b>GDB <tt>stdout</tt>:</b></p><pre>%3</pre>\n"
 		"<p><b>GDB <tt>stderr</tt>:</b></p><pre>%4</pre>",
@@ -83,9 +83,9 @@ static void handle_crash (int sig)
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void init_crash_catcher()
+void initCrashCatcher()
 {	struct sigaction sighandler;
-	sighandler.sa_handler = &handle_crash;
+	sighandler.sa_handler = &handleCrash;
 	sighandler.sa_flags = 0;
 	sigemptyset (&sighandler.sa_mask);
 
@@ -102,8 +102,8 @@ void init_crash_catcher()
 // signal handler, which will cause the usual bomb box with GDB diagnostics.
 // Said prompt will embed the assertion failure information.
 // -----------------------------------------------------------------------------
-void assertion_failure (const char* file, int line, const char* funcname, const char* expr)
-{	str errmsg = fmt (
+void assertionFailure (const char* file, int line, const char* funcname, const char* expr)
+{	QString errmsg = fmt (
 		"<p><b>File</b>: <tt>%1</tt><br />"
 		"<b>Line</b>: <tt>%2</tt><br />"
 		"<b>Function</b>: <tt>%3</tt></p>"

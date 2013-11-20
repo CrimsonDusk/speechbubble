@@ -26,6 +26,10 @@ static const QString g_HTMLColors[] =
 };
 
 static const int g_NumHTMLColors = (sizeof g_HTMLColors / sizeof *g_HTMLColors);
+static QMap<QTreeWidgetItem*, Context*> g_ContextsByTreeItem;
+static Context* g_CurrentContext = null;
+static QList<Context*> g_AllContexts;
+static QMap<int, Context*> g_ContextsByID;
 
 // =============================================================================
 // -----------------------------------------------------------------------------
@@ -40,7 +44,7 @@ static void WriteColors (QString& out, QString color1, QString color2)
 // Converts @in from IRC formatting into HTML formatting. If @allow_internals is
 // set, special sequences are also replaced (e.g. "\\b" with bold)
 // -----------------------------------------------------------------------------
-static QString ConvertToHTML (QString in, bool allow_internals)
+static QString convertToHTML (QString in, bool allow_internals)
 {	QString			color1,
 						color2;
 	bool				boldactive = false;
@@ -116,7 +120,7 @@ static QString ConvertToHTML (QString in, bool allow_internals)
 						assert (num2 != -1);
 					}
 
-					if (within_range (num1, 0, g_NumHTMLColors - 1) && within_range (num2, -1, g_NumHTMLColors - 1))
+					if (isWithinRange (num1, 0, g_NumHTMLColors - 1) && isWithinRange (num2, -1, g_NumHTMLColors - 1))
 					{	color1 = g_HTMLColors[num1];
 						color2 = (num2 != -1) ? g_HTMLColors[num2] : "";
 
@@ -174,10 +178,6 @@ static QString ConvertToHTML (QString in, bool allow_internals)
 	return out;
 }
 
-Context* g_CurrentContext = null;
-static QList<Context*> g_AllContexts;
-static QMap<int, Context*> g_ContextsByID;
-
 // =============================================================================
 // -----------------------------------------------------------------------------
 Context::Context (IRCConnection* conn) : QObject(), m_Type (EServerContext)
@@ -185,7 +185,7 @@ Context::Context (IRCConnection* conn) : QObject(), m_Type (EServerContext)
 	u.conn = conn;
 	setTarget (u);
 	setParent (null);
-	CommonInit();
+	commonInit();
 	win->addContext (this);
 }
 
@@ -196,7 +196,7 @@ Context::Context (IRCChannel* channel) : QObject(), m_Type (EChannelContext)
 	u.chan = channel;
 	setTarget (u);
 	setParent (channel->getConnection()->getContext());
-	CommonInit();
+	commonInit();
 }
 
 // =============================================================================
@@ -206,29 +206,25 @@ Context::Context (IRCUser* user) : QObject(), m_Type (EQueryContext)
 	u.user = user;
 	setTarget (u);
 	setParent (user->getConnection()->getContext());
-	CommonInit();
+	commonInit();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::CommonInit()
+void Context::commonInit()
 {	setID (1);
 	while (g_ContextsByID.find (getID()) != g_ContextsByID.end())
 		setID (getID() + 1);
 
-	setTreeItem (new IRCContextTreeWidgetItem (this));
+	setTreeItem (new QTreeWidgetItem);
 	setDocument (new QTextDocument);
 
-	if (getParent())
+	if (getParent() != null)
 		getParent()->addSubContext (this);
 
 	g_AllContexts << this;
 	g_ContextsByID[getID()] = this;
-
-	/*
-	log ("initialized context with id %1 (parent: %2)\n",
-		getID(), parent() ? QString::number (parent()->getID()) : "none");
-	*/
+	g_ContextsByTreeItem[getTreeItem()] = this;
 }
 
 // =============================================================================
@@ -250,19 +246,21 @@ const QList<Context*>& Context::getAllContexts() // [static]
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::UpdateTreeItem()
+void Context::updateTreeItem()
 {	getTreeItem()->setText (0, getName());
 
 	for (Context* sub : getSubcontexts())
-		sub->UpdateTreeItem();
+		sub->updateTreeItem();
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 void Context::addSubContext (Context* child)
-{	m_Subcontexts << child;
+{	log ("Context #%1: add #%2 as child\n", getID(), child->getID());
+	m_Subcontexts << child;
 	child->setParent (this);
 	getTreeItem()->addChild (child->getTreeItem());
+	updateTreeItem();
 }
 
 // =============================================================================
@@ -274,17 +272,8 @@ void Context::forgetSubContext (Context* child)
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-Context* Context::getFromTreeWidgetItem (QTreeWidgetItem* item)
-{	IRCContextTreeWidgetItem* subitem;
-
-#ifndef RELEASE
-	subitem = dynamic_cast<IRCContextTreeWidgetItem*> (item);
-	assert (subitem != null);
-#else
-	subitem = reinterpret_cast<IRCContextTreeWidgetItem*> (item);
-#endif
-
-	return subitem->getContext();
+Context* Context::getFromTreeWidgetItem (QTreeWidgetItem* item) // [static]
+{	return g_ContextsByTreeItem[item];
 }
 
 // =============================================================================
@@ -323,7 +312,7 @@ QString Context::getName() const
 // =============================================================================
 // -----------------------------------------------------------------------------
 void Context::print (QString text, bool allow_internals)
-{	setHTML (getHTML() + ConvertToHTML (text, allow_internals));
+{	setHTML (getHTML() + convertToHTML (text, allow_internals));
 	getDocument()->setHtml (getHTML());
 }
 

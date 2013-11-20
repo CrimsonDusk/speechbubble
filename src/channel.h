@@ -61,7 +61,7 @@ enum EChanMode
 struct ChannelModeInfo
 {	const char c;
 	const EChanMode mode;
-	const str name;
+	const QString name;
 	const bool hasArg;
 };
 

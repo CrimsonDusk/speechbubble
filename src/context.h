@@ -18,17 +18,6 @@ class QTextDocument;
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-class IRCContextTreeWidgetItem : public QTreeWidgetItem
-{	NEW_PROPERTY (public, Context*, Context)
-
-	public:
-		IRCContextTreeWidgetItem (Context* context) :
-			QTreeWidgetItem ((QTreeWidgetItem*) null),
-			m_Context (context) {}
-};
-
-// =============================================================================
-// -----------------------------------------------------------------------------
 class Context final : public QObject
 {	DELETE_COPY (Context)
 
@@ -45,14 +34,14 @@ class Context final : public QObject
 			IRCUser* user;
 		};
 
-	NEW_PROPERTY (public,  IRCContextTreeWidgetItem*,	TreeItem)
-	NEW_PROPERTY (public,  QTextDocument*,					Document)
-	NEW_PROPERTY (private, QList<Context*>,				Subcontexts)
-	NEW_PROPERTY (private, Context*,							Parent)
-	NEW_PROPERTY (private, TargetUnion,						Target)
-	NEW_PROPERTY (private, ContextType,						Type)
-	NEW_PROPERTY (private, int,								ID)
-	NEW_PROPERTY (private, QString,							HTML)
+	NEW_PROPERTY (public,  QTreeWidgetItem*,	TreeItem)
+	NEW_PROPERTY (public,  QTextDocument*,		Document)
+	NEW_PROPERTY (private, QList<Context*>,	Subcontexts)
+	NEW_PROPERTY (private, Context*,				Parent)
+	NEW_PROPERTY (private, TargetUnion,			Target)
+	NEW_PROPERTY (private, ContextType,			Type)
+	NEW_PROPERTY (private, int,					ID)
+	NEW_PROPERTY (private, QString,				HTML)
 
 	public:
 		Context (IRCConnection* conn);
@@ -62,19 +51,19 @@ class Context final : public QObject
 
 		void				addSubContext (Context* child);
 		void				forgetSubContext (Context* child);
-		void				UpdateTreeItem();
+		void				updateTreeItem();
 		IRCConnection*	getConnection();
 		QString			getName() const;
 		void				print (QString text, bool allow_internals);
 		void				writeIRCMessage (QString from, QString msg);
 
-		static const list<Context*>& getAllContexts();
+		static const QList<Context*>& getAllContexts();
 		static Context* getFromTreeWidgetItem (QTreeWidgetItem* item);
 		static Context* getCurrentContext();
 		static void setCurrentContext (Context* context);
 
 	private:
-		void CommonInit();
+		void commonInit();
 };
 
 #endif // COBALTIRC_CONTEXT_H

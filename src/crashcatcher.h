@@ -3,9 +3,9 @@
 
 #ifdef __unix__
 
-void init_crash_catcher();
+void initCrashCatcher();
 
 #else // ifdef __unix__
-#define init_crash_catcher()
+#define initCrashCatcher()
 #endif // ifdef __unix__
 #endif // ifndef COBALTIRC_CRASHCATCHER_H
