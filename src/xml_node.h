@@ -9,12 +9,12 @@ class XMLNode
 {	public:
 		typedef QMap<QString, QString> AttributeMap;
 
-	NEW_PROPERTY (public,    QString,			Contents);
-	NEW_PROPERTY (public,    QString,			Name)
-	NEW_PROPERTY (protected, QList<XMLNode*>,	Subnodes);
-	NEW_PROPERTY (protected, AttributeMap,		Attributes);
-	NEW_PROPERTY (protected, bool,				IsCData);
-	NEW_PROPERTY (protected, XMLNode*,			Parent);
+	PROPERTY (public,    QString,			Contents);
+	PROPERTY (public,    QString,			Name)
+	PROPERTY (protected, QList<XMLNode*>,	Subnodes);
+	PROPERTY (protected, AttributeMap,		Attributes);
+	PROPERTY (protected, bool,				IsCData);
+	PROPERTY (protected, XMLNode*,			Parent);
 
 	public:
 		XMLNode (QString name, XMLNode* parent);

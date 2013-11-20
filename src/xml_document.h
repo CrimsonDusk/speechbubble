@@ -10,8 +10,8 @@ class XMLDocument
 {	public:
 		typedef QMap<QString, QString> HeaderType;
 
-	NEW_PROPERTY (protected, HeaderType, Header)
-	NEW_PROPERTY (private,   XMLNode*,   Root)
+	PROPERTY (protected, HeaderType, Header)
+	PROPERTY (private,   XMLNode*,   Root)
 
 	public:
 		XMLDocument (XMLNode* root = null);

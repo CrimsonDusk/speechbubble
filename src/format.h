@@ -7,7 +7,7 @@
 #include "macros.h"
 
 class StringFormatArg
-{	NEW_PROPERTY (private, QString, Text)
+{	PROPERTY (private, QString, Text)
 
 	public:
 		StringFormatArg (QString a) : m_Text (a) {}

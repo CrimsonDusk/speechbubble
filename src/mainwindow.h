@@ -12,7 +12,7 @@ class Ui_MainWindow;
 class MainWindow : public QMainWindow
 {	Q_OBJECT
 
-	NEW_PROPERTY (private, bool, CtrlPressed)
+	PROPERTY (private, bool, CtrlPressed)
 
 	public:
 		explicit MainWindow (QWidget* parent = 0, Qt::WindowFlags flags = 0);

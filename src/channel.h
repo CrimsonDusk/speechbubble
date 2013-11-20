@@ -90,8 +90,8 @@ class IRCChannel
 		// =========================================================================
 		// -------------------------------------------------------------------------
 		class Entry
-		{	NEW_PROPERTY (public, IRCUser*, UserInfo)
-			NEW_PROPERTY (public, IRCChannel::FStatusFlags, Status)
+		{	PROPERTY (public, IRCUser*, UserInfo)
+			PROPERTY (public, IRCChannel::FStatusFlags, Status)
 
 			public:
 				Entry (IRCUser* user, EStatus stat) :
@@ -103,16 +103,16 @@ class IRCChannel
 
 	// =========================================================================
 	// -------------------------------------------------------------------------
-	NEW_PROPERTY (public,  QString,					Name)
-	NEW_PROPERTY (public,  QString,					Topic)
-	NEW_PROPERTY (public,  QTime,						JoinTime)
-	NEW_PROPERTY (public,  Context*,					Context)
-	NEW_PROPERTY (private, IRCConnection*,			Connection)
-	NEW_PROPERTY (private, QList<Entry>,			Userlist)
-	NEW_PROPERTY (private, QList<ChannelMode>,	Modes)
-	NEW_PROPERTY (private, QStringList,				Banlist)
-	NEW_PROPERTY (private, QStringList,				Whitelist)
-	NEW_PROPERTY (private, QStringList,				Invitelist)
+	PROPERTY (public,  QString,					Name)
+	PROPERTY (public,  QString,					Topic)
+	PROPERTY (public,  QTime,						JoinTime)
+	PROPERTY (public,  Context*,					Context)
+	PROPERTY (private, IRCConnection*,			Connection)
+	PROPERTY (private, QList<Entry>,			Userlist)
+	PROPERTY (private, QList<ChannelMode>,	Modes)
+	PROPERTY (private, QStringList,				Banlist)
+	PROPERTY (private, QStringList,				Whitelist)
+	PROPERTY (private, QStringList,				Invitelist)
 
 	public:
 		IRCChannel (IRCConnection* conn, QString name);

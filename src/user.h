@@ -16,15 +16,15 @@ class IRCUser
 
 		Q_DECLARE_FLAGS (Flags, Flag)
 
-	NEW_PROPERTY (public,  QString,					Nickname)
-	NEW_PROPERTY (public,  QString,					Username)
-	NEW_PROPERTY (public,  QString,					Hostname)
-	NEW_PROPERTY (public,  QString,					Realname)
-	NEW_PROPERTY (public,  QString,					Server)
-	NEW_PROPERTY (public,  Flags,						Flags)
-	NEW_PROPERTY (public,  Context*,					Context)
-	NEW_PROPERTY (private, IRCConnection*,			Connection)
-	NEW_PROPERTY (private, QList<IRCChannel*>,	Channels) 
+	PROPERTY (public,  QString,					Nickname)
+	PROPERTY (public,  QString,					Username)
+	PROPERTY (public,  QString,					Hostname)
+	PROPERTY (public,  QString,					Realname)
+	PROPERTY (public,  QString,					Server)
+	PROPERTY (public,  Flags,						Flags)
+	PROPERTY (public,  Context*,					Context)
+	PROPERTY (private, IRCConnection*,			Connection)
+	PROPERTY (private, QList<IRCChannel*>,	Channels) 
 
 	public:
 		IRCUser (IRCConnection* conn) :

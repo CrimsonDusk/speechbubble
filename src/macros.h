@@ -15,7 +15,7 @@
 	ACCESS: \
 	inline void set_##NAME (T const& a) { m_##NAME = a; }
 
-#define NEW_PROPERTY(ACCESS, T, NAME) \
+#define PROPERTY(ACCESS, T, NAME) \
 	private: \
 		T m_##NAME; \
 		public: \

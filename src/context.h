@@ -34,14 +34,14 @@ class Context final : public QObject
 			IRCUser* user;
 		};
 
-	NEW_PROPERTY (public,  QTreeWidgetItem*,	TreeItem)
-	NEW_PROPERTY (public,  QTextDocument*,		Document)
-	NEW_PROPERTY (private, QList<Context*>,	Subcontexts)
-	NEW_PROPERTY (private, Context*,				Parent)
-	NEW_PROPERTY (private, TargetUnion,			Target)
-	NEW_PROPERTY (private, ContextType,			Type)
-	NEW_PROPERTY (private, int,					ID)
-	NEW_PROPERTY (private, QString,				HTML)
+	PROPERTY (public,  QTreeWidgetItem*,	TreeItem)
+	PROPERTY (public,  QTextDocument*,		Document)
+	PROPERTY (private, QList<Context*>,	Subcontexts)
+	PROPERTY (private, Context*,				Parent)
+	PROPERTY (private, TargetUnion,			Target)
+	PROPERTY (private, ContextType,			Type)
+	PROPERTY (private, int,					ID)
+	PROPERTY (private, QString,				HTML)
 
 	public:
 		Context (IRCConnection* conn);

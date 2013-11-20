@@ -18,12 +18,12 @@ class XMLScanner
 			EString
 		};
 
-	NEW_PROPERTY (private, const char*,  Data);
-	NEW_PROPERTY (private, const char*,  Position);
-	NEW_PROPERTY (private, QString,      Token);
-	NEW_PROPERTY (private, EToken,       TokenType);
-	NEW_PROPERTY (private, bool,         IsInsideTag);
-	NEW_PROPERTY (private, int,          Line)
+	PROPERTY (private, const char*,  Data);
+	PROPERTY (private, const char*,  Position);
+	PROPERTY (private, QString,      Token);
+	PROPERTY (private, EToken,       TokenType);
+	PROPERTY (private, bool,         IsInsideTag);
+	PROPERTY (private, int,          Line)
 
 	public:
 		XMLScanner (const char* data);

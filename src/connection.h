@@ -90,14 +90,14 @@ class IRCConnection : public QObject
 
 	Q_OBJECT
 	DELETE_COPY (IRCConnection)
-	NEW_PROPERTY (public,  QString,				Nick)
-	NEW_PROPERTY (public,  QString,				User)
-	NEW_PROPERTY (public,  QString,				Name)
-	NEW_PROPERTY (private, Context*,				Context)
-	NEW_PROPERTY (private, QString,				Hostname)
-	NEW_PROPERTY (private, quint16,				Port)
-	NEW_PROPERTY (private, EConnectionState,	State)
-	NEW_PROPERTY (private, QString,				Linework)
+	PROPERTY (public,  QString,				Nick)
+	PROPERTY (public,  QString,				User)
+	PROPERTY (public,  QString,				Name)
+	PROPERTY (private, Context*,				Context)
+	PROPERTY (private, QString,				Hostname)
+	PROPERTY (private, quint16,				Port)
+	PROPERTY (private, EConnectionState,	State)
+	PROPERTY (private, QString,				Linework)
 
 	public:
 		explicit IRCConnection (QString host, quint16 port, QObject* parent = 0);
