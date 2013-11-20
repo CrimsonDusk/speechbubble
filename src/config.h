@@ -7,8 +7,7 @@
 #include "main.h"
 
 #define CONFIG(T, NAME, DEFAULT) namespace cfg { Config::T NAME = DEFAULT; } \
-	Config::ConfigAdder zz_ConfigAdder_##NAME (&cfg::NAME, Config::E##T, \
-		#NAME, Config::T (DEFAULT));
+	Config::ConfigAdder zz_ConfigAdder_##NAME (&cfg::NAME, Config::E##T, #NAME);
 
 #define EXTERN_CONFIG(T, NAME) namespace cfg { extern Config::T NAME; }
 #define MAX_CONFIG 512
@@ -32,10 +31,8 @@ namespace Config
 	{	void* ptr;
 		EDataType type;
 		const char* name;
+		ConfigData* next;
 	};
-
-	extern ConfigData g_ConfigData[MAX_CONFIG];
-	extern int g_ConfigDataCursor;
 
 	// Type-definitions for the above enum list
 	typedef int Int;
@@ -48,29 +45,14 @@ namespace Config
 	typedef QFont Font;
 
 	// ------------------------------------------
-	bool           Load (QString fname);
-	bool           SaveTo (QString fname);
+	bool           loadFromFile (QString fname);
+	bool           saveToFile (QString fname);
+	void				freeConfigData();
 	XMLDocument*   xml();
 
 	class ConfigAdder
 	{	public:
-			// =============================================================================
-			// We cannot just add config objects to a list or vector because that would rely
-			// on the QList's c-tor being called before the configs' c-tors. With global
-			// variables we cannot assume that!! Therefore we need to use a C-style array here.
-			// -----------------------------------------------------------------------------
-			template<class T> ConfigAdder (T* ptr, EDataType type, const char* name, const T& def)
-			{	if (g_ConfigDataCursor == 0)
-				memset (g_ConfigData, 0, sizeof g_ConfigData);
-
-				assert (g_ConfigDataCursor < MAX_CONFIG);
-				ConfigData& i = g_ConfigData[g_ConfigDataCursor++];
-				i.ptr = ptr;
-				i.type = type;
-				i.name = name;
-
-				*ptr = def;
-			}
+			ConfigAdder (void* ptr, EDataType type, const char* name);
 	};
 };
 

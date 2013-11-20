@@ -3,11 +3,37 @@
 #include "xml_document.h"
 #include "format.h"
 
+Config::ConfigData* g_ConfigData = null;
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+Config::ConfigAdder::ConfigAdder(void* ptr, Config::EDataType type, const char* name)
+{	ConfigData* i = new ConfigData;
+	i->ptr = ptr;
+	i->type = type;
+	i->name = name;
+	i->next = g_ConfigData;
+	g_ConfigData = i;
+
+	atexit (&Config::freeConfigData);
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+void Config::freeConfigData()
+{	ConfigData* i = g_ConfigData;
+
+	while (i != null)
+	{	ConfigData* old = i;
+		i = i->next;
+		delete old;
+	}
+}
+
 // =============================================================================
 // -----------------------------------------------------------------------------
 namespace Config
-{	ConfigData              g_ConfigData[MAX_CONFIG];
-	int                     g_ConfigDataCursor = 0;
+{	int                     g_ConfigDataCursor = 0;
 	static XMLDocument*     g_XMLDocument = null;
 
 	// =============================================================================
@@ -72,7 +98,7 @@ namespace Config
 	// =============================================================================
 	// Load the configuration element @ptr with type @type from XML node @node
 	// -----------------------------------------------------------------------------
-	static void LoadFromXML (void* ptr, EDataType type, XMLNode* node)
+	static void loadFromXML (void* ptr, EDataType type, XMLNode* node)
 	{	switch (type)
 		{	case EInt:
 				*(reinterpret_cast<int*> (ptr)) = node->getContents().toLong();
@@ -126,7 +152,7 @@ namespace Config
 	// =============================================================================
 	// Load the configuration from @fname
 	// -----------------------------------------------------------------------------
-	bool Load (QString fname)
+	bool loadFromFile (QString fname)
 	{	log ("config::load: Loading configuration file from %1\n", fname);
 
 		XMLDocument* doc = XMLDocument::loadFromFile (fname);
@@ -134,14 +160,11 @@ namespace Config
 		if (!doc)
 			return false;
 
-		for (auto& i : g_ConfigData)
-		{	if (i.name == null)
-				break;
-
-			XMLNode* node = doc->navigateTo (QString (i.name).split ("_"));
+		for (ConfigData* i = g_ConfigData; i; i = i->next)
+		{	XMLNode* node = doc->navigateTo (QString (i->name).split ("_"));
 
 			if (node)
-				LoadFromXML (i.ptr, i.type, node);
+				loadFromXML (i->ptr, i->type, node);
 		}
 
 		g_XMLDocument = doc;
@@ -151,18 +174,14 @@ namespace Config
 	// =============================================================================
 	// Save the configuration to @fname
 	// -----------------------------------------------------------------------------
-	bool SaveTo (QString fname)
+	bool saveToFile (QString fname)
 	{	if (g_XMLDocument == null)
 			g_XMLDocument = XMLDocument::newDocument ("config");
 
 		log ("Saving configuration to %1...\n", fname);
 
-		for (auto& i : g_ConfigData)
-		{	if (i.name == null)
-				break;
-
-			saveToXML (i.name, i.ptr, i.type);
-		}
+		for (ConfigData* i = g_ConfigData; i; i = i->next)
+			saveToXML (i->name, i->ptr, i->type);
 
 		return g_XMLDocument->saveToFile (fname);
 	}

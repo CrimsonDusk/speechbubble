@@ -15,7 +15,7 @@ int main (int argc, char* argv[])
 {	QApplication app (argc, argv);
 	initCrashCatcher();
 
-	if (!Config::Load (configname))
+	if (!Config::loadFromFile (configname))
 	{	flog (stderr, "unable to load %1: %2\n", configname, XMLDocument::getParseError());
 		return 1;
 	}

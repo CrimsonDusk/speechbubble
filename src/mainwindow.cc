@@ -15,12 +15,12 @@
 	connect (m_ui->action##NAME, SIGNAL (triggered()), this, SLOT (action##NAME()));
 
 MainWindow* win = null;
-QTextDocument blank_document;
+QTextDocument g_defaultDocument;
 
-CONFIG (String,	quicklaunch_nick, "")
-CONFIG (String,	quicklaunch_server, "")
-CONFIG (Int,		quicklaunch_port, 6667)
-CONFIG (Font,		output_font, QFont())
+CONFIG (String,	quicklaunch_nick,		"")
+CONFIG (String,	quicklaunch_server,	"")
+CONFIG (Int,		quicklaunch_port,		6667)
+CONFIG (Font,		output_font,			QFont())
 
 // =============================================================================
 // -----------------------------------------------------------------------------
@@ -120,9 +120,15 @@ void MainWindow::closeEvent (QCloseEvent* ev)
 			numactive++;
 
 	if (numactive > 0)
-	{	if (QMessageBox::question (this, "Really quit?",
-			fmt (tr ("There are %1 active connections, do you really want to quit?"), numactive),
-			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+	{	QString msg;
+
+		if (numactive == 1)
+			msg = tr ("There is an active connection, do you really want to quit?");
+		else
+			msg = fmt (tr ("There are %1 active connections, do you really want to quit?"), numactive);
+
+		if (QMessageBox::question (this, "Really quit?",
+			msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{	ev->ignore();
 			return;
 		}
@@ -131,7 +137,7 @@ void MainWindow::closeEvent (QCloseEvent* ev)
 	for (Context* c : Context::getAllContexts())
 		c->getConnection()->disconnectFromServer();
 
-	Config::SaveTo (configname);
+	Config::saveToFile (configname);
 	ev->accept();
 }
 
@@ -140,11 +146,8 @@ void MainWindow::closeEvent (QCloseEvent* ev)
 void MainWindow::updateOutputWidget()
 {	Context* context = Context::getCurrentContext();
 	m_ui->m_output->setEnabled (context != null);
-
-	if (context)
-		m_ui->m_output->setDocument (context->getDocument());
-	else
-		m_ui->m_output->setDocument (&blank_document);
+	m_ui->m_output->setDocument (context ? context->getDocument() : &g_defaultDocument);
+	m_ui->m_output->setFont (cfg::output_font);
 }
 
 // =============================================================================

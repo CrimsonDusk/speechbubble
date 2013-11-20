@@ -10,14 +10,6 @@
 #define PROPERTY(ACCESS, T, NAME) \
 	private: \
 		T m_##NAME; \
-	public: \
-		inline T const& NAME() const { return m_##NAME; } \
-	ACCESS: \
-	inline void set_##NAME (T const& a) { m_##NAME = a; }
-
-#define PROPERTY(ACCESS, T, NAME) \
-	private: \
-		T m_##NAME; \
 		public: \
 			inline T const& get##NAME() const { return m_##NAME; } \
 			ACCESS: \

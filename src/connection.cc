@@ -48,8 +48,6 @@ IRCConnection::IRCConnection (QString host, quint16 port, QObject* parent) :
 	connect (m_timer, SIGNAL (timeout()), this, SLOT (tick()));
 	connect (m_socket, SIGNAL (readyRead()), this, SLOT (readyRead()));
 	g_connections << this;
-
-	IRCChannel* chan = new IRCChannel (this, "#argho");
 }
 
 // =============================================================================
