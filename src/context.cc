@@ -149,12 +149,12 @@ static QString ConvertToHTML (QString in, bool allow_internals)
 
 			case REVERSE_CHAR:
 			{	if (color1.isEmpty())
-					color1 = g_HTMLColors[0];
+					color1 = g_HTMLColors[1];
 				else
 					out += "</span>";
 
 				if (color2.isEmpty())
-					color2 = g_HTMLColors[1];
+					color2 = g_HTMLColors[0];
 
 				color1.swap (color2);
 				WriteColors (out, color1, color2);
