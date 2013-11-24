@@ -20,16 +20,17 @@ class IRCUser
 	PROPERTY (public,  QString,					Username)
 	PROPERTY (public,  QString,					Hostname)
 	PROPERTY (public,  QString,					Realname)
-	PROPERTY (public,  QString,					Server)
 	PROPERTY (public,  Flags,						Flags)
 	PROPERTY (public,  Context*,					Context)
 	PROPERTY (private, IRCConnection*,			Connection)
-	PROPERTY (private, QList<IRCChannel*>,	Channels) 
+	PROPERTY (private, QList<IRCChannel*>,		Channels)
 
 	public:
 		IRCUser (IRCConnection* conn) :
 			m_Flags (0),
+			m_Context (null),
 			m_Connection (conn) {}
+		~IRCUser();
 
 		void               	addKnownChannel (IRCChannel* chan);
 		IRCChannel::EStatus	getStatusInChannel (IRCChannel* chan);

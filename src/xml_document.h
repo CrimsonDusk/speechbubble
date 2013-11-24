@@ -20,7 +20,6 @@ class XMLDocument
 		XMLNode*                findNodeByName (QString name) const;
 		XMLNode*                navigateTo (const QStringList& path, bool allowMake = false) const;
 		bool                    saveToFile (QString fname) const;
-		void                    setRoot (XMLNode* root);
 
 		static QString          encodeString (QString in);
 		static QString          decodeString (QString in);
@@ -30,6 +29,18 @@ class XMLDocument
 
 	private:
 		void                    writeNode (FILE* fp, const XMLNode* node) const;
+};
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+class XMLError : public std::exception
+{	PROPERTY (private, QString,	Error)
+public:
+	XMLError (QString err) : m_Error (err) {}
+	
+	inline const char* what() const throw()
+	{	return getError().toLocal8Bit().constData();
+	}
 };
 
 #endif // LIBCOBALT_XML_H

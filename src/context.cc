@@ -3,6 +3,7 @@
 #include "user.h"
 #include "connection.h"
 #include "mainwindow.h"
+#include "misc.h"
 #include <QTextDocument>
 #include <QTreeWidget>
 #include <typeinfo>
@@ -15,7 +16,7 @@ static const QString g_HTMLColors[] =
 	"#A00000", // red
 	"#800000", // dark red
 	"#800080", // dark purple
-	"#80FF00", // orange
+	"#FF8000", // orange
 	"#FFFF00", // yellow
 	"#40FF00", // light green
 	"#00FFFF", // cyan
@@ -25,7 +26,7 @@ static const QString g_HTMLColors[] =
 	"#404040", // dark gray
 };
 
-static const int g_NumHTMLColors = (sizeof g_HTMLColors / sizeof *g_HTMLColors);
+static const int g_NumHTMLColors = COUNT_OF (g_HTMLColors);
 static QMap<QTreeWidgetItem*, Context*> g_ContextsByTreeItem;
 static Context* g_CurrentContext = null;
 static QList<Context*> g_AllContexts;
@@ -33,7 +34,7 @@ static QMap<int, Context*> g_ContextsByID;
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-static void WriteColors (QString& out, QString color1, QString color2)
+static void writeColors (QString& out, QString color1, QString color2)
 {	if (!color2.isEmpty())
 	out += fmt ("<span style=\"color: %1; background-color: %2;\">", color1, color2);
 	else
@@ -41,28 +42,28 @@ static void WriteColors (QString& out, QString color1, QString color2)
 }
 
 // =============================================================================
-// Converts @in from IRC formatting into HTML formatting. If @allow_internals is
+// Converts @in from IRC formatting into HTML formatting. If @replaceEscapeCodes is
 // set, special sequences are also replaced (e.g. "\\b" with bold)
 // -----------------------------------------------------------------------------
-static QString convertToHTML (QString in, bool allow_internals)
+static QString convertToHTML (QString in, bool replaceEscapeCodes)
 {	QString			color1,
 						color2;
 	bool				boldactive = false;
-	const QRegExp	colormask ("(\\d\\d?)(;\\d\\d?)?"); // regex for colors, e.g. 4;12
+	const QRegExp	colorMask ("(\\d\\d?)(;\\d\\d?)?"); // regex for colors, e.g. 4;12
 	QString			out;
-	bool				underlineactive = false;
+	bool				underlineActive = false;
 
 	// The string more than most probably does not end with a normalizer character,
 	// so append one now. This ensures all tags are closed properly and nothing will
 	// bleed out of this string into the document.
 	in += NORMAL_STR;
 
-	// If we allow internal characters, replace them now. Internal codes are allowed in
-	// internal printing, since it also uses this function and writing "\\bargh" is more
-	// convenient than writing BOLD_STR "argh". @allow_internals is false in privmsg
-	// messages coming from the IRC server so that if someone includes \u in their actual
-	// message it doesn't turn into an underline formatting code.
-	if (allow_internals)
+	// Replace escape codes now. We allow this in internal printing, since it also uses
+	// this function and writing "\\bargh" is more convenient than writing BOLD_STR
+	// "argh". @replaceEscapeCodes is false in privmsg messages coming from the IRC
+	// server so that if someone includes \u in their actual message it doesn't turn
+	// into an underline formatting code.
+	if (replaceEscapeCodes)
 	{	in.replace ("\\b", BOLD_STR);
 		in.replace ("\\c", COLOR_STR);
 		in.replace ("\\o", NORMAL_STR);
@@ -89,19 +90,19 @@ static QString convertToHTML (QString in, bool allow_internals)
 			} break;
 
 			case UNDERLINE_CHAR:
-			{	toggle (underlineactive);
+			{	toggle (underlineActive);
 
-				if (underlineactive)
+				if (underlineActive)
 					out += "<u>";
 				else
 					out += "</u>";
 			} break;
 
 			case COLOR_CHAR:
-			{	if (colormask.indexIn (in.mid (i + 1)) != -1)
-				{	assert (colormask.capturedTexts().size() == 3);
-					QString	num1str = colormask.capturedTexts()[1],
-								num2str = colormask.capturedTexts()[2];
+			{	if (colorMask.indexIn (in.mid (i + 1)) != -1)
+				{	assert (colorMask.capturedTexts().size() == 3);
+					QString	num1str = colorMask.capturedTexts()[1],
+								num2str = colorMask.capturedTexts()[2];
 					int		num1,
 								num2 = -1;
 
@@ -110,12 +111,11 @@ static QString convertToHTML (QString in, bool allow_internals)
 					if (!num2str.isEmpty())
 					{	// The regex capture includes the separating ';' as well, rid
 						// it now.
-						if (Q_LIKELY (num2str[0] == ';'))
-							num2str.remove (0, 1);
+						assert (num2str[0] == ';');
+						num2str.remove (0, 1);
 
-						// note: the regexp does not allow num2str to be -1 since
-						// it only allows digits, so we don't need to worry about
-						// someone passing \\c4;-1 and causing unwanted behavior.
+						// Note: the regexp does not allow num2str to be -1 since
+						// it only allows digits, so assert is enough here.
 						num2 = num2str.toInt();
 						assert (num2 != -1);
 					}
@@ -124,8 +124,8 @@ static QString convertToHTML (QString in, bool allow_internals)
 					{	color1 = g_HTMLColors[num1];
 						color2 = (num2 != -1) ? g_HTMLColors[num2] : "";
 
-						WriteColors (out, color1, color2);
-						i += colormask.matchedLength();
+						writeColors (out, color1, color2);
+						i += colorMask.matchedLength();
 					}
 				}
 				elif (!color1.isEmpty())
@@ -140,9 +140,9 @@ static QString convertToHTML (QString in, bool allow_internals)
 					boldactive = false;
 				}
 
-				if (underlineactive)
+				if (underlineActive)
 				{	out += "</u>";
-					underlineactive = false;
+					underlineActive = false;
 				}
 
 				if (!color1.isEmpty())
@@ -161,10 +161,9 @@ static QString convertToHTML (QString in, bool allow_internals)
 					color2 = g_HTMLColors[0];
 
 				color1.swap (color2);
-				WriteColors (out, color1, color2);
+				writeColors (out, color1, color2);
 			} break;
 
-			// for internal use:
 			case '\n':
 			{	out += "<br />";
 			} break;
@@ -197,6 +196,8 @@ Context::Context (IRCChannel* channel) : QObject(), m_Type (EChannelContext)
 	setTarget (u);
 	setParent (channel->getConnection()->getContext());
 	commonInit();
+
+	IRCChannel::connect (channel, SIGNAL (userlistChanged()), win, SLOT (updateUserlist()));
 }
 
 // =============================================================================
@@ -311,8 +312,8 @@ QString Context::getName() const
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::print (QString text, bool allow_internals)
-{	setHTML (getHTML() + convertToHTML (text, allow_internals));
+void Context::print (QString text, bool replaceEscapeCodes)
+{	setHTML (getHTML() + convertToHTML (text, replaceEscapeCodes));
 	getDocument()->setHtml (getHTML());
 }
 
@@ -338,7 +339,7 @@ IRCConnection* Context::getConnection()
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void Context::writeIRCMessage (QString from, QString msg)
-{	print (fmt ("[%1] <\\b%2\\b> %3\n",
-		QTime::currentTime().toString (Qt::TextDate), from, msg), false);
+void Context::writeIRCMessage (QString msg)
+{	print (fmt ("\\c2[%1]\\o %2\n",
+		QTime::currentTime().toString (Qt::TextDate), msg), false);
 }

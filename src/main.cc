@@ -17,7 +17,7 @@ int main (int argc, char* argv[])
 
 	if (!Config::loadFromFile (configname))
 	{	flog (stderr, "unable to load %1: %2\n", configname, XMLDocument::getParseError());
-		return 1;
+		exit (EXIT_FAILURE);
 	}
 
 	(new MainWindow)->show();

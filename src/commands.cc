@@ -1,6 +1,7 @@
 #include "commands.h"
 #include "context.h"
 #include "connection.h"
+#include "misc.h"
 
 #define DEFINE_COMMAND(N) void COIRC_Command_##N (QStringList args, const CommandInfo* cmdinfo)
 #define DECLARE_COMMAND(N) { #N, &COIRC_Command_##N },
@@ -15,17 +16,24 @@ static void error (QString message)
 
 // ============================================================================
 // ----------------------------------------------------------------------------
+static void padArgsTo (QStringList& args, int a)
+{	while (args.size() < a)
+	args << "";
+}
+
+// ============================================================================
+// ----------------------------------------------------------------------------
 static void checkParms (int minparms, int maxparms, QString parmusage, 
 								QStringList& args, const CommandInfo* cmdinfo)
-{	if (args.size() < minparms || args.size() > maxparms)
+{	if (args.size() < minparms || (maxparms != -1 && args.size() > maxparms))
 		error (fmt ("Too %1 arguments\nUsage: /%2 %3",
 			(args.size() < minparms ? "few" : "many"),
 			cmdinfo->name, parmusage));
 
-	while (args.size() < maxparms)
-		args << "";	
+	if (maxparms != -1)
+		padArgsTo (args, maxparms);
 
-	assert (args.size() == maxparms);
+	assert (maxparms == -1 || args.size() == maxparms);
 }
 
 // ============================================================================
@@ -57,8 +65,9 @@ DEFINE_COMMAND (join)
 // ============================================================================
 // ----------------------------------------------------------------------------
 DEFINE_COMMAND (part)
-{	CHECK_PARMS (1, 2, "<channel> [partmessage]")
-	writeRaw (fmt ("PART %1 :%2", args[0], args[1]));
+{	CHECK_PARMS (1, -1, "<channel> [partmessage]")
+	padArgsTo (args, 2);
+	writeRaw (fmt ("PART %1 :%2\n", args[0], lrange (args, 1)));
 }
 
 // ============================================================================

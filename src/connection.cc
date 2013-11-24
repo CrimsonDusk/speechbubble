@@ -7,30 +7,12 @@
 #include "channel.h"
 #include "mainwindow.h"
 #include "config.h"
+#include "misc.h"
+#include "user.h"
 
 CONFIG (String, quitmessage, "Bye.")
 static QList<IRCConnection*> g_connections;
-
-// =============================================================================
-// Joins the indices [@a, @b] of @list. If @b is not passed, joins indices from
-// @a to end of list.
-// -----------------------------------------------------------------------------
-static QString lrange (const QStringList& list, int a, int b = -1)
-{	if (b == -1)
-		b = list.size() - 1;
-
-	assert (list.size() > a && list.size() > b && b > a);
-	QString out;
-
-	for (auto it = list.begin() + a; it <= list.begin() + b; ++it)
-	{	if (!out.isEmpty())
-			out += " ";
-
-		out += *it;
-	}
-
-	return out;
-}
+static const QRegExp g_UserMask ("^:([^\\!]+)\\!([^@]+)@(.+)$");
 
 // =============================================================================
 // -----------------------------------------------------------------------------
@@ -39,6 +21,7 @@ IRCConnection::IRCConnection (QString host, quint16 port, QObject* parent) :
 	m_Hostname (host),
 	m_Port (port),
 	m_State (EDisconnected),
+	m_Ourselves (null),
 	m_socket (new QTcpSocket (this)),
 	m_timer (new QTimer)
 {
@@ -105,15 +88,16 @@ void IRCConnection::disconnectFromServer (QString quitmessage)
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-void IRCConnection::print (QString msg, bool allow_internals)
-{	getContext()->print (msg, allow_internals);
+void IRCConnection::print (QString msg, bool replaceEscapeCodes)
+{	getContext()->print (msg, replaceEscapeCodes);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 void IRCConnection::readyRead() // [slot]
 {	QString data = getLinework() + QString (m_socket->readAll());
-	QStringList datalist = data.split ("\n", QString::SkipEmptyParts);
+	data.replace ("\r", "");
+	QStringList datalist = data.split ("\n");
 
 	for (auto it = datalist.begin(); it < datalist.end() - 1; ++it)
 		processMessage (*it);
@@ -144,25 +128,122 @@ void IRCConnection::processMessage (QString msg)
 		return;
 	}
 
-	if (tokens.size() > 1)
-	{	QString numstr = tokens[1];
-		bool ok;
-		int num = numstr.toInt (&ok);
+	if (tokens.size() <= 1)
+		return;
 
-		if (ok)
-		{	parseNumeric (msg, tokens, num);
-			return;
-		}
+	QString numstr = tokens[1];
+	bool ok;
+	int num = numstr.toInt (&ok);
+
+	if (ok)
+	{	parseNumeric (msg, tokens, num);
+		return;
 	}
+
+	if (tokens[1] == "JOIN")
+		processJoin (msg, tokens);
+	elif (tokens[1] == "PART")
+		processPart (msg, tokens);
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+void IRCConnection::processJoin (QString msg, QStringList tokens)
+{	if (tokens.size() != 3 || g_UserMask.indexIn (tokens[0]) == -1)
+	{	warning (fmt ("Recieved illegible JOIN from server: %1", msg));
+		return;
+	}
+
+	QString channame = tokens[2];
+	QString joiner = g_UserMask.capturedTexts() [1];
+
+	if (Q_LIKELY (channame.startsWith (":")))
+		channame.remove (0, 1);
+
+	// Find the channel by name. Create it if we join it, but not if someone joins a
+	// channel we know nothing about.
+	IRCChannel* chan = findChannelByName (channame, joiner == getOurselves()->getNickname());
+
+	if (!chan)
+	{	warning (fmt ("Recieved JOIN from %1 to unknown channel %2", joiner, channame));
+		return;
+	}
+
+	// Find a data field for the newcomer. They can be totally new to us so we
+	// can create a data field for them if we don't already have one.
+	IRCUser* user = findUserByNick (joiner, true);
+	assert (joiner != getOurselves()->getNickname() || user == getOurselves());
+
+	if (chan->findUser (user) != null)
+	{	warning (fmt (tr ("%1 has apparently rejoined %2 without leaving it in the first place?"), joiner, channame));
+		return;
+	}
+
+	chan->addUser (user);
+	QString msgToPrint;
+
+	if (user == getOurselves())
+		msgToPrint = fmt (tr ("Now talking in %1"), chan->getName());
+	else
+		msgToPrint = fmt (tr ("%1 has joined %2"), user->getNickname(), chan->getName());
+
+	chan->getContext()->writeIRCMessage (msgToPrint);
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+void IRCConnection::processPart (QString msg, QStringList tokens)
+{	if (tokens.size() < 3 || g_UserMask.indexIn (tokens[0]) == -1)
+	{	warning (fmt ("Recieved illegible PART from server: %1", msg));
+		return;
+	}
+
+	QString partmsg;
+	QString parter = g_UserMask.capturedTexts()[1];
+	QString channame = tokens[2];
+
+	if (channame.startsWith (":"))
+		channame.remove (0, 1);
+
+	IRCUser* user = findUserByNick (parter, false);
+	IRCChannel* chan = findChannelByName (channame, false);
+
+	if (!user || !chan)
+	{	warning (fmt (tr ("Recieved strange PART from server, apparently \"%1\" "
+			"leaves \"%2\"? I don't know that user/channel."), parter, channame));
+		return;
+	}
+
+	if (tokens.size() >= 4)
+	{	partmsg = lrange (tokens, 3);
+
+		if (Q_LIKELY (partmsg.startsWith (":")))
+			partmsg.remove (0, 1);
+	}
+
+	chan->removeUser (user);
+
+	// If we left the channel, drop it now
+	if (user == getOurselves())
+		delete chan;
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
-{	switch (num)
+{	(void) msg;
+
+	switch (num)
 	{	case ERplWelcome:
 			setState (EConnected);
 			print ("\\b\\c3Connected!\n");
+
+			if (getOurselves() == null)
+			{	IRCUser* user = findUserByNick (getNick(), true);
+				user->setUsername (getUser());
+				user->setRealname (getName());
+				setOurselves (user);
+			}
 		case ERplYourHost:
 		case ERplCreated:
 		case ERplMotdStart:
@@ -182,4 +263,64 @@ void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 // -----------------------------------------------------------------------------
 const QList<IRCConnection*>& IRCConnection::getAllConnections()
 {	return g_connections;
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+void IRCConnection::addChannel (IRCChannel* a)
+{	if (m_Channels.contains (a))
+		return;
+
+	m_Channels << a;
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+void IRCConnection::removeChannel (IRCChannel* a)
+{	m_Channels.removeOne (a);
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+IRCChannel* IRCConnection::findChannelByName (QString name, bool createIfNeeded)
+{	for (IRCChannel* chan : m_Channels)
+		if (chan->getName() == name)
+			return chan;
+
+	if (createIfNeeded)
+	{	IRCChannel* chan = new IRCChannel (this, name);
+		getContext()->updateTreeItem();
+		return chan;
+	}
+
+	return null;
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+void IRCConnection::warning (QString msg)
+{	print (fmt ("\\c7\\bWarning:\\o %1\n", msg));
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+IRCUser* IRCConnection::findUserByNick (QString nickname, bool createIfNeeded)
+{	for (IRCUser* user : m_Users)
+		if (user->getNickname() == nickname)
+			return user;
+
+	if (createIfNeeded)
+	{	IRCUser* user = new IRCUser (this);
+		user->setNickname (nickname);
+		m_Users << user;
+		return user;
+	}
+
+	return null;
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+void IRCConnection::forgetUser (IRCUser* user)
+{	m_Users.removeOne (user);
 }

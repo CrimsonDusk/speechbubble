@@ -28,6 +28,7 @@ class MainWindow : public QMainWindow
 		void actionQuit();
 		void contextSelected (QTreeWidgetItem* item);
 		void inputEnterPressed();
+		void updateUserlist();
 
 	protected:
 		void closeEvent (QCloseEvent* ev);

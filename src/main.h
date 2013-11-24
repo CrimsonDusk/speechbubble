@@ -27,28 +27,6 @@ extern const char* configname;
 typedef void FILE;
 #endif
 
-
-// Removes the last item of @list into @a
-template<class T, class R> bool pop (R& list, T& a)
-{	if (list.isEmpty())
-		return false;
-
-	a = list.last();
-	list.remove (list.size() - 1);
-	return true;
-}
-
-// Checks whether @a is within [@min, @max] inclusive
-template<class T> static inline bool isWithinRange (T a, T min, T max)
-{	return (a >= min && a <= max);
-}
-
-// Toggles the value of @a
-static inline bool& toggle (bool& a)
-{	a = !a;
-	return a;
-}
-
 #ifdef assert
 #undef assert
 #endif // assert
@@ -61,5 +39,7 @@ void assertionFailure (const char* file, int line, const char* funcname, const c
 #else
 # define assert {}
 #endif // RELEASE
+
+#define COUNT_OF(A) (sizeof A / sizeof *A)
 
 #endif // COIRC_MAIN_H

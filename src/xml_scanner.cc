@@ -2,13 +2,21 @@
 #include "xml_document.h"
 
 static const char* g_XMLTokens[] =
-{	"<?xml",     // HeaderStart
-	"?>",        // HeaderEnd
-	"</",        // TagCloser
-	"/>",        // TagSelfCloser
-	"<",         // TagStart
-	">",         // TagEnd
+{	"<?xml",			// HeaderStart
+	"?>",				// HeaderEnd
+	"</",				// TagCloser
+	"/>",				// TagSelfCloser
+	"<",				// TagStart
+	">",				// TagEnd
+	// -------------------
+	"CData",			// ECData,
+	"Equals sign",	// EEquals,
+	"a symbol",		// ESymbol
+	"a string",		// EString
 };
+
+// amount of tokens which are processed from tokens above
+static const int g_numXMLProcessedTokens = 6;
 
 static const char* g_CDataStart   = "<![CDATA[";
 static const char* g_CDataEnd     = "]]>";
@@ -66,7 +74,7 @@ bool XMLScanner::scanNextToken()
 	}
 
 	// Check "<", ">", "/>", ...
-	for (int i = 0; i < (signed) (sizeof g_XMLTokens / sizeof * g_XMLTokens); ++i)
+	for (int i = 0; i < g_numXMLProcessedTokens; ++i)
 	{	if (checkString (g_XMLTokens[i]))
 		{	setToken (g_XMLTokens[i]);
 			setTokenType ((EToken) i);
@@ -145,15 +153,22 @@ bool XMLScanner::scanNextToken()
 // =============================================================================
 // -----------------------------------------------------------------------------
 bool XMLScanner::scanNextToken (EToken tok)
-{	const char* old_pos = getPosition();
+{	const char* oldPosition = getPosition();
 
 	if (!scanNextToken())
 		return false;
 
 	if (getTokenType() != tok)
-	{	setPosition (old_pos);
+	{	setPosition (oldPosition);
 		return false;
 	}
 
 	return true;
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+void XMLScanner::mustScanNext (XMLScanner::EToken tok)
+{	if (!scanNextToken (tok))
+		throw XMLError (fmt ("Expected '%1', got '%2' instead", g_XMLTokens[tok], getToken()));
 }

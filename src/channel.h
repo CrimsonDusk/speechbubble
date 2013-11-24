@@ -72,8 +72,10 @@ struct ChannelMode
 	QString arg;
 };
 
-class IRCChannel
-{	public:
+class IRCChannel : public QObject
+{	Q_OBJECT
+
+	public:
 		// =========================================================================
 		// -------------------------------------------------------------------------
 		enum EStatus
@@ -108,8 +110,8 @@ class IRCChannel
 	PROPERTY (public,  QTime,						JoinTime)
 	PROPERTY (public,  Context*,					Context)
 	PROPERTY (private, IRCConnection*,			Connection)
-	PROPERTY (private, QList<Entry>,			Userlist)
-	PROPERTY (private, QList<ChannelMode>,	Modes)
+	PROPERTY (private, QList<Entry>,				Userlist)
+	PROPERTY (private, QList<ChannelMode>,		Modes)
 	PROPERTY (private, QStringList,				Banlist)
 	PROPERTY (private, QStringList,				Whitelist)
 	PROPERTY (private, QStringList,				Invitelist)
@@ -131,6 +133,9 @@ class IRCChannel
 		static EStatus			effectiveStatus (FStatusFlags mode);
 		static FStatusFlags	getStatusFlag (char c);
 		static QString			getStatusName (FStatusFlags mode);
+
+	signals:
+		void userlistChanged();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS (IRCChannel::FStatusFlags)

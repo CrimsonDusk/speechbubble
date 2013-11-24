@@ -4,7 +4,10 @@
 #include "xml_document.h"
 #include "format.h"
 #include "xml_scanner.h"
+#include "misc.h"
 
+// =============================================================================
+// -----------------------------------------------------------------------------
 static QString					g_XMLError;
 static QVector<XMLNode*>	g_Stack;
 static int						g_SaveStack;
@@ -29,17 +32,6 @@ static XMLNode* topStackNode()
 
 // =============================================================================
 // -----------------------------------------------------------------------------
-#define XML_ERROR(...) { \
-	g_XMLError = fmt ("Line %1: ", scan.getLine()) + fmt (__VA_ARGS__) + fmt (" (token: '%1')", scan.getToken()); \
-	delete[] buf; \
-	delete root; \
-	return null; }
-
-#define XML_MUST_GET(N) \
-	if (!scan.scanNextToken (XMLScanner::E##N)) XML_ERROR ("Expected " #N)
-
-// =============================================================================
-// -----------------------------------------------------------------------------
 XMLDocument::XMLDocument (XMLNode* root) :
 	m_Root (root)
 {	m_Header["version"] = "1.0";
@@ -61,114 +53,119 @@ XMLDocument* XMLDocument::newDocument (QString rootName)
 // =============================================================================
 // -----------------------------------------------------------------------------
 XMLDocument* XMLDocument::loadFromFile (QString fname)
-{	FILE*			fp;
+{	FILE*			fp = null;
 	long			fsize;
-	char*			buf;
+	char*			buf = null;
 	XMLNode*		root = null;
 	HeaderType	header;
 
-	if ((fp = fopen (fname.toStdString().c_str(), "r")) == null)
-	{	g_XMLError = fmt ("couldn't open %1 for reading: %2", fname, strerror (errno));
-		return null;
-	}
+	try
+	{	if ((fp = fopen (fname.toStdString().c_str(), "r")) == null)
+			throw XMLError (fmt ("couldn't open %1 for reading: %2", fname, strerror (errno)));
 
-	fseek (fp, 0l, SEEK_END);
-	fsize = ftell (fp);
-	rewind (fp);
-	buf = new char[fsize + 1];
+		fseek (fp, 0l, SEEK_END);
+		fsize = ftell (fp);
+		rewind (fp);
+		buf = new char[fsize + 1];
 
-	if ((long) fread (buf, 1, fsize, fp) < fsize)
-	{	g_XMLError = fmt ("I/O error while opening %1", fname);
+		if ((long) fread (buf, 1, fsize, fp) < fsize)
+			throw XMLError (fmt ("I/O error while opening %1", fname));
+
+		buf[fsize] = '\0';
 		fclose (fp);
-		return null;
-	}
+		fp = null;
+		XMLScanner scan (buf);
+		scan.mustScanNext (XMLScanner::EHeaderStart);
 
-	buf[fsize] = '\0';
+		while (scan.scanNextToken (XMLScanner::ESymbol))
+		{	QString attrname = scan.getToken();
+			scan.mustScanNext (XMLScanner::EEquals);
+			scan.mustScanNext (XMLScanner::EString);
+			header[attrname] = scan.getToken();
+		}
 
-	fclose (fp);
-	XMLScanner scan (buf);
-	XML_MUST_GET (HeaderStart)
+		scan.mustScanNext (XMLScanner::EHeaderEnd);
 
-	while (scan.scanNextToken (XMLScanner::ESymbol))
-	{	QString attrname = scan.getToken();
-		XML_MUST_GET (Equals)
-		XML_MUST_GET (String)
-		header[attrname] = scan.getToken();
-	}
+		if (header.find ("version") == header.end())
+			throw XMLError ("No version defined in header!");
 
-	XML_MUST_GET (HeaderEnd)
+		while (scan.scanNextToken())
+		{	switch (scan.getTokenType())
+			{	case XMLScanner::ETagStart:
+				{	scan.mustScanNext (XMLScanner::ESymbol);
+					XMLNode* node = new XMLNode (scan.getToken(), topStackNode());
 
-	/*
-	if (header.find ("version") == header.end())s
-		XML_ERROR ("No version defined in header!");
-	*/
+					if (g_Stack.size() == 0)
+					{	if (root != null)
+						{	// XML forbids having multiple roots
+							delete node;
+							throw XMLError ("Multiple root nodes");
+						}
 
-	while (scan.scanNextToken())
-	{	switch (scan.getTokenType())
-		{	case XMLScanner::ETagStart:
-			{	XML_MUST_GET (Symbol)
-				XMLNode* node = new XMLNode (scan.getToken(), topStackNode());
-
-				if (g_Stack.size() == 0)
-				{	if (root != null)
-					{	// XML forbids having multiple roots
-						delete node;
-						XML_ERROR ("Multiple root nodes")
+						root = node;
 					}
 
-					root = node;
-				}
+					g_Stack << node;
 
-				g_Stack << node;
+					while (scan.scanNextToken (XMLScanner::ESymbol))
+					{	QString attrname = scan.getToken();
+						scan.mustScanNext (XMLScanner::EEquals);
+						scan.mustScanNext (XMLScanner::EString);
+						node->setAttribute (attrname, scan.getToken());
+						assert (node->hasAttribute (attrname));
+					}
 
-				while (scan.scanNextToken (XMLScanner::ESymbol))
-				{	QString attrname = scan.getToken();
-					XML_MUST_GET (Equals)
-					XML_MUST_GET (String)
-					node->setAttribute (attrname, scan.getToken());
-					assert (node->hasAttribute (attrname));
-				}
+					if (scan.scanNextToken (XMLScanner::ETagSelfCloser))
+					{	XMLNode* popee;
+						assert (pop (g_Stack, popee) && popee == node);
+					}
+					else
+						scan.mustScanNext (XMLScanner::ETagEnd);
+				} break;
 
-				if (scan.scanNextToken (XMLScanner::ETagSelfCloser))
-				{	XMLNode* popee;
-					assert (pop (g_Stack, popee) && popee == node);
-				}
-				else
-					XML_MUST_GET (TagEnd)
-			} break;
+				case XMLScanner::ETagCloser:
+				{	scan.mustScanNext (XMLScanner::ESymbol);
+					XMLNode* popee;
 
-			case XMLScanner::ETagCloser:
-			{	XML_MUST_GET (Symbol)
-				XMLNode* popee;
+					if (!pop (g_Stack, popee) || popee->getName() != scan.getToken())
+						throw XMLError ("Misplaced closing tag");
 
-				if (!pop (g_Stack, popee) || popee->getName() != scan.getToken())
-					XML_ERROR ("Misplaced closing tag")
+					scan.mustScanNext (XMLScanner::ETagEnd);
+				} break;
 
-				XML_MUST_GET (TagEnd)
-			} break;
+				case XMLScanner::ECData:
+				case XMLScanner::ESymbol:
+				{	if (g_Stack.size() == 0)
+						throw XMLError ("Misplaced CDATA/symbol");
 
-			case XMLScanner::ECData:
-			case XMLScanner::ESymbol:
-			{	if (g_Stack.size() == 0)
-					XML_ERROR ("Misplaced CDATA/symbol")
+						XMLNode* node = g_Stack[g_Stack.size() - 1];
 
-					XMLNode* node = g_Stack[g_Stack.size() - 1];
+					node->setIsCData (scan.getTokenType() == XMLScanner::ECData);
+					node->setContents (node->getIsCData() ? decodeString (scan.getToken()) : scan.getToken());
+				} break;
 
-				node->setIsCData (scan.getTokenType() == XMLScanner::ECData);
-				node->setContents (node->getIsCData() ? decodeString (scan.getToken()) : scan.getToken());
-			} break;
-
-			case XMLScanner::EString:
-			case XMLScanner::EHeaderStart:
-			case XMLScanner::EHeaderEnd:
-			case XMLScanner::EEquals:
-			case XMLScanner::ETagSelfCloser:
-			case XMLScanner::ETagEnd:
-			{	XML_ERROR ("Unexpected token '%1'", scan.getToken());
-			} break;
+				case XMLScanner::EString:
+				case XMLScanner::EHeaderStart:
+				case XMLScanner::EHeaderEnd:
+				case XMLScanner::EEquals:
+				case XMLScanner::ETagSelfCloser:
+				case XMLScanner::ETagEnd:
+				{	throw XMLError (fmt ("Unexpected token '%1'", scan.getToken()));
+				} break;
+			}
 		}
+	} catch (XMLError& e)
+	{	g_XMLError = e.getError();
+		delete[] buf;
+		delete root;
+
+		if (fp)
+			fclose (fp);
+
+		return null;
 	}
 
+	delete[] buf;
 	XMLDocument* doc = new XMLDocument (root);
 	doc->setHeader (header);
 	return doc;

@@ -39,9 +39,6 @@ MainWindow::MainWindow (QWidget* parent, Qt::WindowFlags flags) :
 	connect (m_ui->m_channels, SIGNAL (currentItemChanged (QTreeWidgetItem*, QTreeWidgetItem*)),
 		this, SLOT (contextSelected (QTreeWidgetItem*)));
 	connect (m_ui->m_input, SIGNAL (returnPressed()), this, SLOT (inputEnterPressed()));
-
-	m_ui->m_output->setFontFamily ("Monospace");
-	m_ui->m_output->setFontPointSize (11);
 }
 
 // =============================================================================
@@ -91,14 +88,13 @@ void MainWindow::actionDisconnect()
 // =============================================================================
 // -----------------------------------------------------------------------------
 void MainWindow::actionQuit()
-{	exit (0);
+{	exit (EXIT_SUCCESS);
 }
 
 // =============================================================================
 // -----------------------------------------------------------------------------
 void MainWindow::addContext (Context* a)
-{	log ("Add context #%1 as top-level item\n", a->getID());
-	m_ui->m_channels->addTopLevelItem (a->getTreeItem());
+{	m_ui->m_channels->addTopLevelItem (a->getTreeItem());
 	a->getTreeItem()->setExpanded (true);
 	a->updateTreeItem();
 }
@@ -153,7 +149,14 @@ void MainWindow::updateOutputWidget()
 // =============================================================================
 // -----------------------------------------------------------------------------
 void MainWindow::contextSelected (QTreeWidgetItem* item)
-{	Context::setCurrentContext (Context::getFromTreeWidgetItem (item));
+{	Context* oldContext = Context::getCurrentContext();
+	Context* newContext = Context::getFromTreeWidgetItem (item);
+
+	if (oldContext == newContext)
+		return;
+
+	Context::setCurrentContext (newContext);
+	updateUserlist();
 }
 
 // =============================================================================
@@ -192,7 +195,7 @@ void MainWindow::inputEnterPressed() // [slot]
 			{	try
 				{	(*g_Commands[i].func) (args, &g_Commands[i]);
 				} catch (CommandError& err)
-				{	Context::getCurrentContext()->print (fmt (tr ("\\b\\c4Error: %1\n"), err.what()), true);
+				{	Context::printToCurrent (fmt (tr ("\\b\\c4Error: %1\n"), err.what()));
 				}
 
 				return;
@@ -200,7 +203,7 @@ void MainWindow::inputEnterPressed() // [slot]
 		}
 
 		// No command matched, send as raw
-		Context::getCurrentContext()->print (fmt ("-> raw: %1\n", input), true);
+		Context::printToCurrent (fmt ("-> raw: %1\n", input));
 		conn->write (input + "\n");
 		return;
 	}
@@ -218,4 +221,39 @@ void MainWindow::inputEnterPressed() // [slot]
 		{	conn->write (fmt ("PRIVMSG %1 :%2\n", context->getTarget().user->getNickname(), input));
 		} break;
 	}
+}
+
+// =============================================================================
+// -----------------------------------------------------------------------------
+void MainWindow::updateUserlist()
+{	IRCChannel* senderChan = qobject_cast<IRCChannel*> (sender());
+	Context* ctx = Context::getCurrentContext();
+	IRCChannel* currentChan = (ctx->getType() == Context::EChannelContext) ? ctx->getTarget().chan : null;
+
+	// If this is triggered by a channel through a connection, only update if the
+	// channel is the one we have selected right now.
+	if (senderChan != null && currentChan != senderChan)
+		return;
+
+	m_ui->m_userlist->clear();
+
+	// If we're not in a channel, don't re-populate it.
+	if (currentChan == null)
+		return;
+
+	QList<IRCChannel::Entry> users = currentChan->getUserlist();
+	std::sort (users.begin(), users.end(),
+		[currentChan](const IRCChannel::Entry& a, const IRCChannel::Entry& b) -> bool
+		{	if (a.getUserInfo()->getStatusInChannel (currentChan) < b.getUserInfo()->getStatusInChannel (currentChan))
+				return true;
+
+			if (a.getUserInfo()->getStatusInChannel (currentChan) > b.getUserInfo()->getStatusInChannel (currentChan))
+				return false;
+
+			return a.getUserInfo()->getNickname() < b.getUserInfo()->getNickname();
+		}
+	);
+
+	for (const IRCChannel::Entry& e : users)
+		m_ui->m_userlist->addItem (e.getUserInfo()->getNickname());
 }

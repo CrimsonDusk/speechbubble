@@ -36,11 +36,11 @@ class Context final : public QObject
 
 	PROPERTY (public,  QTreeWidgetItem*,	TreeItem)
 	PROPERTY (public,  QTextDocument*,		Document)
-	PROPERTY (private, QList<Context*>,	Subcontexts)
+	PROPERTY (private, QList<Context*>,		Subcontexts)
 	PROPERTY (private, Context*,				Parent)
 	PROPERTY (private, TargetUnion,			Target)
 	PROPERTY (private, ContextType,			Type)
-	PROPERTY (private, int,					ID)
+	PROPERTY (private, int,						ID)
 	PROPERTY (private, QString,				HTML)
 
 	public:
@@ -54,13 +54,17 @@ class Context final : public QObject
 		void				updateTreeItem();
 		IRCConnection*	getConnection();
 		QString			getName() const;
-		void				print (QString text, bool allow_internals);
-		void				writeIRCMessage (QString from, QString msg);
+		void				print (QString text, bool replaceEscapeCodes);
+		void				writeIRCMessage (QString msg);
 
 		static const QList<Context*>& getAllContexts();
 		static Context* getFromTreeWidgetItem (QTreeWidgetItem* item);
 		static Context* getCurrentContext();
 		static void setCurrentContext (Context* context);
+
+		static inline void printToCurrent (QString msg)
+		{	Context::getCurrentContext()->print (msg, true);
+		}
 
 	private:
 		void commonInit();

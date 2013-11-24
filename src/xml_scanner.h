@@ -30,6 +30,7 @@ class XMLScanner
 
 		bool scanNextToken();
 		bool scanNextToken (EToken tok);
+		void mustScanNext (EToken tok);
 
 	private:
 		bool checkString (const char* c, bool peek = false);

@@ -16,13 +16,15 @@
 #define REVERSE_STR			"\x16"
 #define REVERSE_CHAR			'\x16'
 
+class IRCUser;
+class IRCChannel;
 class Context;
 class QTcpSocket;
 class QTimer;
 
 class IRCConnection : public QObject
 {	public:
-	enum EConnectionState
+		enum EConnectionState
 		{	EDisconnected,
 			EConnecting,
 			ERegistering,
@@ -88,6 +90,11 @@ class IRCConnection : public QObject
 			ERplNeedMoreParams      = 461,
 		};
 
+		struct PrefixInfo
+		{	char	modesym;
+			char	prefix;
+		};
+
 	Q_OBJECT
 	DELETE_COPY (IRCConnection)
 	PROPERTY (public,  QString,				Nick)
@@ -98,14 +105,21 @@ class IRCConnection : public QObject
 	PROPERTY (private, quint16,				Port)
 	PROPERTY (private, EConnectionState,	State)
 	PROPERTY (private, QString,				Linework)
+	PROPERTY (private, QList<IRCChannel*>,	Channels)
+	PROPERTY (private, IRCUser*,				Ourselves)
 
 	public:
 		explicit IRCConnection (QString host, quint16 port, QObject* parent = 0);
 		virtual ~IRCConnection();
 
+		void addChannel (IRCChannel* a);
+		void removeChannel (IRCChannel* a);
+		IRCChannel* findChannelByName (QString name, bool createIfNeeded);
 		void write (QString text);
 		void connectToServer();
 		void disconnectFromServer (QString quitmessage = "");
+		IRCUser* findUserByNick (QString nickname, bool createIfNeeded);
+		void forgetUser (IRCUser* user);
 
 		static const QList<IRCConnection*>& getAllConnections();
 
@@ -114,12 +128,16 @@ class IRCConnection : public QObject
 		void writeLogin();
 
 	private:
-		QTcpSocket* m_socket;
-		QTimer*     m_timer;
+		QTcpSocket*			m_socket;
+		QTimer*				m_timer;
+		QList<IRCUser*>	m_Users;
 
 		void processMessage (QString msg);
-		void print (QString msg, bool allow_internals = true);
+		void print (QString msg, bool replaceEscapeCodes = true);
+		void warning (QString msg);
 		void parseNumeric (QString msg, QStringList tokens, int num);
+		void processJoin (QString msg, QStringList tokens);
+		void processPart (QString msg, QStringList tokens);
 
 	private slots:
 		void tick();

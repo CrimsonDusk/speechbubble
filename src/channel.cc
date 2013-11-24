@@ -2,23 +2,30 @@
 #include "user.h"
 #include "connection.h"
 #include "context.h"
-#include <qstringlist.h>
+#include "moc_channel.cpp"
 
 IRCChannel::IRCChannel (IRCConnection* conn, QString name) :
 	m_Name (name),
 	m_JoinTime (QTime::currentTime()),
 	m_Connection (conn)
 {	setContext (new Context (this));
+	m_Connection->addChannel (this);
 }
 
 IRCChannel::~IRCChannel()
 {	delete getContext();
+
+	for (const IRCChannel::Entry& e : getUserlist())
+	{	IRCUser* user = e.getUserInfo();
+		user->dropKnownChannel (this);
+	}
 }
 
 IRCChannel::Entry* IRCChannel::addUser (IRCUser* info)
 {	Entry e (info, FNormal);
 	info->addKnownChannel (this);
 	m_Userlist << e;
+	emit userlistChanged();
 	return &(m_Userlist.last());
 }
 
@@ -28,6 +35,7 @@ void IRCChannel::removeUser (IRCUser* info)
 	for (const Entry& e : getUserlist())
 	{	if (e.getUserInfo() == info)
 		{	m_Userlist.removeOne (e);
+			emit userlistChanged();
 			return;
 		}
 	}
@@ -222,6 +230,7 @@ void IRCChannel::applyModeString (QString text)
 				status &= ~flag;
 
 			e->setStatus (status);
+			emit userlistChanged();
 			continue;
 		}
 
