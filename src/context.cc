@@ -376,7 +376,7 @@ void Context::rawPrint (QString msg, bool replaceEscapeCodes)
 //
 void Context::printTimestamp()
 {
-	QString tstamp = QDateTime::currentDateTime().toString (Qt::TextDate);
+	QString tstamp = QDateTime::currentDateTime().toString ("hh:mm:ss");
 	rawPrint (format ("\\c2[%1]\\o ", tstamp), true);
 }
 

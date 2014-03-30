@@ -13,7 +13,7 @@ IRCChannel::IRCChannel (IRCConnection* conn, const QString& newname) :
 {
 	setContext (new Context (this));
 	m_connection->addChannel (this);
-	m_connection->write (format ("WHO %1", name()));
+	m_connection->write (format ("WHO %1\n", name()));
 }
 
 // ============================================================================

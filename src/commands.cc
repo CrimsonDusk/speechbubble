@@ -69,7 +69,7 @@ DEFINE_COMMAND (part)
 {
 	CHECK_PARMS (1, -1, "<channel> [partmessage]")
 	padArgsTo (args, 2);
-	writeRaw (format("PART %1 :%2\n", args[0], lrange (args, 1)));
+	writeRaw (format("PART %1 :%2\n", args[0], subset (args, 1)));
 }
 
 // ============================================================================

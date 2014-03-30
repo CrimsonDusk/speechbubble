@@ -47,7 +47,7 @@
        </layout>
       </item>
       <item>
-       <widget class="QLineEdit" name="m_input"/>
+       <widget class="SBLineEdit" name="m_input"/>
       </item>
      </layout>
     </item>
@@ -59,7 +59,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>26</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSpeechbubble">
@@ -127,6 +127,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SBLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>lineedit.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

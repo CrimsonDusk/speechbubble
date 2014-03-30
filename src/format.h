@@ -1,6 +1,5 @@
 /*
- *  LDForge: LDraw parts authoring CAD
- *  Copyright (C) 2013, 2014 Santeri Piippo
+ *  Copyright (C) 2014 Santeri Piippo
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +18,7 @@
 #pragma once
 #include <QString>
 #include <QList>
+#include <QFlags>
 
 //! \file format.h
 //! Contains string formatting-related functions and classes.
@@ -60,6 +60,16 @@ class StringFormatArg
 			}
 
 			m_text += "}";
+		}
+
+		template<typename T>
+		StringFormatArg (QFlags<T> a) :
+			m_text (QString::number (a, 16))
+		{
+			while (m_text.length() < 8)
+				m_text.prepend ("0");
+
+			m_text.prepend ("0x");
 		}
 
 		inline QString text() const

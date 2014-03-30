@@ -56,10 +56,10 @@ void IRCConnection::write (QString text)
 //
 void IRCConnection::writeLogin()
 {
-	write (format("USER %1 * * :%2\n", username(), realname()));
-	write (format("NICK %1\n", nickname()));
+	write (format ("USER %1 * * :%2\n", username(), realname()));
+	write (format ("NICK %1\n", nickname()));
 	setState (ERegistering);
-	print (format(tr ("Registering as \\b%1:%2:%3..."), nickname(), username(), realname()));
+	print (format (tr ("Registering as \\b%1:%2:%3..."), nickname(), username(), realname()));
 	disconnect (m_socket, SIGNAL (connected()));
 }
 
@@ -70,7 +70,7 @@ void IRCConnection::connectToServer()
 	m_socket->connectToHost (hostname(), port());
 	m_timer->start (100);
 	setState (EConnecting);
-	print (format(tr ("Connecting to \\b%1:%2\\o..."), hostname(), port()));
+	print (format (tr ("Connecting to \\b%1:%2\\o..."), hostname(), port()));
 	connect (m_socket, SIGNAL (connected()), this, SLOT (writeLogin()));
 	connect (m_socket, SIGNAL (error (QAbstractSocket::SocketError)),
 			 this, SLOT (processConnectionError (QAbstractSocket::SocketError)));
@@ -84,7 +84,7 @@ void IRCConnection::disconnectFromServer (QString quitmessage)
 		quitmessage = cfg::quitmessage;
 
 	if (state() == EConnected)
-		write (format("QUIT :%1\n", quitmessage));
+		write (format ("QUIT :%1\n", quitmessage));
 
 	m_socket->disconnectFromHost();
 	m_timer->stop();
@@ -121,7 +121,7 @@ void IRCConnection::processConnectionError (QAbstractSocket::SocketError err) //
 {
 	(void) err;
 
-	print (format("\\b\\c4Connection error: %1", m_socket->errorString ()));
+	print (format (R"(\b\c4Connection error: %1)", m_socket->errorString ()));
 	setState (CNS_Disconnected);
 }
 
@@ -132,18 +132,17 @@ void IRCConnection::processMessage (QString msg)
 	::print ("-> %1\n", msg);
 	QStringList tokens = msg.split (" ", QString::SkipEmptyParts);
 
+	if (tokens.size() < 2)
+		return;
+
 	if (tokens.size() > 1 && tokens[0] == "PING")
 	{
-		write ("PONG " + lrange (tokens, 1) + "\n");
+		write ("PONG " + subset (tokens, 1) + "\n");
 		return;
 	}
 
-	if (tokens.size() <= 1)
-		return;
-
-	QString numstr = tokens[1];
 	bool ok;
-	int num = numstr.toInt (&ok);
+	int num = tokens[1].toInt (&ok);
 
 	if (ok == true)
 	{
@@ -171,7 +170,7 @@ void IRCConnection::processJoin (QString msg, QStringList tokens)
 {
 	if (tokens.size() != 3 || gUserMask.indexIn (tokens[0]) == -1)
 	{
-		warning (format("Recieved illegible JOIN from server: %1", msg));
+		warning (format ("Recieved illegible JOIN from server: %1", msg));
 		return;
 	}
 
@@ -187,7 +186,7 @@ void IRCConnection::processJoin (QString msg, QStringList tokens)
 
 	if (!chan)
 	{
-		warning (format("Recieved JOIN from %1 to unknown channel %2", joiner, channame));
+		warning (format ("Recieved JOIN from %1 to unknown channel %2", joiner, channame));
 		return;
 	}
 
@@ -198,7 +197,7 @@ void IRCConnection::processJoin (QString msg, QStringList tokens)
 
 	if (chan->findUser (user) != null)
 	{
-		warning (format(tr ("%1 has apparently rejoined %2 without leaving it in the first place?"), joiner, channame));
+		warning (format (tr ("%1 has apparently rejoined %2 without leaving it in the first place?"), joiner, channame));
 		return;
 	}
 
@@ -206,9 +205,9 @@ void IRCConnection::processJoin (QString msg, QStringList tokens)
 	QString msgToPrint;
 
 	if (user == ourselves())
-		msgToPrint = format(tr ("-> Now talking in %1"), chan->name());
+		msgToPrint = format (tr ("-> Now talking in %1"), chan->name());
 	else
-		msgToPrint = format(tr ("-> %1 has joined %2"), user->nickname(), chan->name());
+		msgToPrint = format (tr ("-> %1 has joined %2"), user->nickname(), chan->name());
 
 	chan->context()->print (msgToPrint);
 }
@@ -219,7 +218,7 @@ void IRCConnection::processPart (QString msg, QStringList tokens)
 {
 	if (tokens.size() < 3 || gUserMask.indexIn (tokens[0]) == -1)
 	{
-		warning (format("Recieved illegible PART from server: %1", msg));
+		warning (format ("Recieved illegible PART from server: %1", msg));
 		return;
 	}
 
@@ -235,14 +234,14 @@ void IRCConnection::processPart (QString msg, QStringList tokens)
 
 	if (user == null || chan == null)
 	{
-		warning (format(tr ("Recieved strange PART from server, apparently \"%1\" "
+		warning (format (tr ("Recieved strange PART from server, apparently \"%1\" "
 			"leaves \"%2\"? I don't know that user/channel."), parter, channame));
 		return;
 	}
 
 	if (tokens.size() >= 4)
 	{
-		partmsg = lrange (tokens, 3);
+		partmsg = subset (tokens, 3);
 
 		if (Q_LIKELY (partmsg.startsWith (":")))
 			partmsg.remove (0, 1);
@@ -254,7 +253,7 @@ void IRCConnection::processPart (QString msg, QStringList tokens)
 	if (user == ourselves())
 		delete chan;
 	else
-		chan->context()->print (format(tr ("<- %1 has left %2%3"), parter, channame,
+		chan->context()->print (format (tr ("<- %1 has left %2%3"), parter, channame,
 			(!partmsg.isEmpty() ? (": " + partmsg) : QString())));
 }
 
@@ -264,7 +263,7 @@ void IRCConnection::processQuit (QString msg, QStringList tokens)
 {
 	if (tokens.size() < 2 || gUserMask.indexIn (tokens[0]) == -1)
 	{
-		warning (format(tr ("Recieved illegible QUIT from server: %1"), msg));
+		warning (format (tr ("Recieved illegible QUIT from server: %1"), msg));
 		return;
 	}
 
@@ -274,14 +273,14 @@ void IRCConnection::processQuit (QString msg, QStringList tokens)
 
 	if (!user)
 	{
-		warning (format(tr ("Recieved strange QUIT from server: apparently some "
+		warning (format (tr ("Recieved strange QUIT from server: apparently some "
 			"\"%1\" has quit IRC?"), quitter));
 		return;
 	}
 
 	if (tokens.size() >= 3)
 	{
-		quitmessage = lrange (tokens, 2);
+		quitmessage = subset (tokens, 2);
 
 		if (Q_LIKELY (quitmessage.startsWith (":")))
 			quitmessage.remove (0, 1);
@@ -289,7 +288,7 @@ void IRCConnection::processQuit (QString msg, QStringList tokens)
 
 	// Announce the quit in all channels he's in
 	for (IRCChannel* chan : user->channels())
-		chan->context()->print (format(tr ("<- %1 has disconnected%2"),
+		chan->context()->print (format (tr ("<- %1 has disconnected%2"),
 			quitter, (!quitmessage.isEmpty() ? ": " + quitmessage : QString())));
 
 	delete user;
@@ -301,14 +300,14 @@ void IRCConnection::processPrivmsg (QString msg, QStringList tokens)
 {
 	if (tokens.size() < 4 || gUserMask.indexIn (tokens[0]) == -1)
 	{
-		warning (format(tr ("Recieved illegible PRIVMSG from server: %1"), msg));
+		warning (format (tr ("Recieved illegible PRIVMSG from server: %1"), msg));
 		return;
 	}
 
 	QString usernick = gUserMask.capturedTexts()[1];
 	IRCUser* user = findUser (usernick, false);
 	Context* ctx = null;
-	QString message = lrange (tokens, 3);
+	QString message = subset (tokens, 3);
 
 	if (Q_LIKELY (message.startsWith (":")))
 		message.remove (0, 1);
@@ -332,7 +331,7 @@ void IRCConnection::processPrivmsg (QString msg, QStringList tokens)
 
 		if (!chan)
 		{
-			warning (format(tr ("Recieved strange PRIVMSG from %1 to \"%2\": %3"),
+			warning (format (tr ("Recieved strange PRIVMSG from %1 to \"%2\": %3"),
 				usernick, tokens[2], msg));
 			return;
 		}
@@ -350,22 +349,22 @@ void IRCConnection::processMode (QString msg, QStringList tokens)
 {
 	if (tokens.size() < 4 || gUserMask.indexIn (tokens[0]) == -1)
 	{
-		warning (format(tr ("Recieved illegible MODE from server: %1"), msg));
+		warning (format (tr ("Recieved illegible MODE from server: %1"), msg));
 		return;
 	}
 
 	QString usernick = gUserMask.capturedTexts()[1];
-	QString modestring = lrange (tokens, 3, -1);
+	QString modestring = subset (tokens, 3, -1);
 	IRCChannel* chan = findChannel (tokens[2], false);
 
 	if (chan == null)
 	{
-		warning (format(tr ("Recieved strange MODE from server: %1"), lrange (tokens, 2, -1)));
+		warning (format (tr ("Recieved strange MODE from server: %1"), subset (tokens, 2, -1)));
 		return;
 	}
 
 	chan->applyModeString (modestring);
-	chan->context()->print (format(tr ("* %1 has set mode %2"), usernick, modestring));
+	chan->context()->print (format (tr ("* %1 has set mode %2"), usernick, modestring));
 }
 
 // =============================================================================
@@ -376,11 +375,11 @@ void IRCConnection::processTopicChange (QString msg, QStringList tokens)
 
 	if (tokens.size() < 4 || (chan = findChannel (tokens[2], false)) == null)
 	{
-		warning (format(tr ("Recieved illegible TOPIC from server: %1"), msg));
+		warning (format (tr ("Recieved illegible TOPIC from server: %1"), msg));
 		return;
 	}
 
-	QString newtopic = lrange (tokens, 3, -1);
+	QString newtopic = subset (tokens, 3, -1);
 
 	if (newtopic.startsWith (":"))
 		newtopic.remove (0, 1);
@@ -389,7 +388,7 @@ void IRCConnection::processTopicChange (QString msg, QStringList tokens)
 
 	if (gUserMask.indexIn (tokens[0]) != -1)
 	{
-		setterDescription = format("%1 (%2@%3)",
+		setterDescription = format ("%1 (%2@%3)",
 			gUserMask.capturedTexts()[1],
 			gUserMask.capturedTexts()[2],
 			gUserMask.capturedTexts()[3]);
@@ -403,7 +402,7 @@ void IRCConnection::processTopicChange (QString msg, QStringList tokens)
 	}
 
 	chan->setTopic (newtopic);
-	chan->context()->print (format(tr ("* %1 has set the channel topic to: %2"), setterDescription, newtopic));
+	chan->context()->print (format (tr ("* %1 has set the channel topic to: %2"), setterDescription, newtopic));
 }
 
 // =============================================================================
@@ -431,7 +430,7 @@ void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 		case Reply_Motd:
 		case Reply_EndOfMotd:
 		{
-			QString msg = lrange (tokens, 3);
+			QString msg = subset (tokens, 3);
 
 			if (msg[0] == QChar (':'))
 				msg.remove (0, 1);
@@ -446,7 +445,7 @@ void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 			if (tokens.size() < 6 || (chan = findChannel (tokens[4], false)) == null)
 				return;
 
-			QString namestring = lrange (tokens, 5, -1);
+			QString namestring = subset (tokens, 5, -1);
 
 			if (Q_LIKELY (namestring.startsWith (":")))
 				namestring.remove (0, 1);
@@ -471,13 +470,13 @@ void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 			if (tokens.size() < 4 || (chan = findChannel (tokens[3], false)) == null)
 				return;
 
-			QString topic = lrange (tokens, 4, -1);
+			QString topic = subset (tokens, 4, -1);
 
 			if (Q_LIKELY (topic.startsWith (":")))
 				topic.remove (0, 1);
 
 			chan->setTopic (topic);
-			chan->context()->print (format(tr ("* Channel topic is: %1"), topic));
+			chan->context()->print (format (tr ("* Channel topic is: %1"), topic));
 		} break;
 
 		case Reply_TopicSetAt:
@@ -492,11 +491,11 @@ void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 
 			if (!ok)
 			{
-				warning (format(tr ("Bad timestamp for topic of %1, got: %2"), tokens[3], tokens[5]));
+				warning (format (tr ("Bad timestamp for topic of %1, got: %2"), tokens[3], tokens[5]));
 				return;
 			}
 
-			chan->context()->print (format(tr ("* Topic was set by %1 on %2"), tokens[4],
+			chan->context()->print (format (tr ("* Topic was set by %1 on %2"), tokens[4],
 				QDateTime::fromTime_t (time).toString (Qt::TextDate)));
 		} break;
 	}
@@ -548,7 +547,7 @@ IRCChannel* IRCConnection::findChannel (QString name, bool createIfNeeded)
 //
 void IRCConnection::warning (QString msg)
 {
-	print (format("\\c7\\bWarning:\\o %1", msg));
+	print (format ("\\c7\\bWarning:\\o %1", msg));
 }
 
 // =============================================================================

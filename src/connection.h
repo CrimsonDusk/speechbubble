@@ -5,19 +5,6 @@
 #include <QObject>
 #include <QAbstractSocket>
 
-#define BOLD_STR			"\x02"
-#define BOLD_CHAR			'\x02'
-#define COLOR_STR			"\x03"
-#define COLOR_CHAR			'\x03'
-#define NORMAL_STR			"\x0F"
-#define NORMAL_CHAR			'\x0F'
-#define UNDERLINE_STR		"\x15"
-#define UNDERLINE_CHAR		'\x15'
-#define REVERSE_STR			"\x16"
-#define REVERSE_CHAR		'\x16'
-#define ITALIC_CHAR			'\x1D'
-#define ITALIC_STR			"\x1D"
-
 class IRCUser;
 class IRCChannel;
 class Context;
