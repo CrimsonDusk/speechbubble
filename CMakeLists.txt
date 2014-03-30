@@ -49,7 +49,7 @@ set (SPEECHBUBBLE_HEADERS
 )
 
 set (SPEECHBUBBLE_FORMS
-	ui/banlist.ui
+	ui/entrylist.ui
 	ui/bombbox.ui
 	ui/connectTo.ui
 	ui/main.ui
