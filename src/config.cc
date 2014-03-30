@@ -3,14 +3,14 @@
 #include "xml_document.h"
 #include "format.h"
 
-Config::ConfigData*		gConfigData = null;
-static XMLDocument*     gXMLDocument = null;
+Config::ConfigData*		g_configData = null;
+static XMLDocument*     g_XMLDocument = null;
 
 // =============================================================================
 //
 static void freeConfigData()
 {
-	Config::ConfigData* i = gConfigData;
+	Config::ConfigData* i = g_configData;
 
 	while (i != null)
 	{
@@ -27,10 +27,10 @@ static void freeConfigData()
 //
 static void saveElementToXML (QString name, void* ptr, Config::EDataType type)
 {
-	XMLNode* node = gXMLDocument->navigateTo (name.split ("_"), true);
+	XMLNode* node = g_XMLDocument->navigateTo (name.split ("_"), true);
 
 	if (!node)
-		node = new XMLNode (name, gXMLDocument->root());
+		node = new XMLNode (name, g_XMLDocument->root());
 
 	switch (type)
 	{
@@ -109,53 +109,51 @@ static void loadFromXML (void* ptr, Config::EDataType type, XMLNode* node)
 {
 	switch (type)
 	{
-	case Config::EInt:
-		*reinterpret_cast<int*> (ptr) = node->contents().toLong();
-		break;
+		case Config::EInt:
+			*reinterpret_cast<int*> (ptr) = node->contents().toLong();
+			break;
 
-	case Config::EString:
-		*reinterpret_cast<QString*> (ptr) = node->contents();
-		break;
+		case Config::EString:
+			*reinterpret_cast<QString*> (ptr) = node->contents();
+			break;
 
-	case Config::EFloat:
-		*reinterpret_cast<float*> (ptr) = node->contents().toFloat();
-		break;
+		case Config::EFloat:
+			*reinterpret_cast<float*> (ptr) = node->contents().toFloat();
+			break;
 
-	case Config::EBool:
-	{
-		QString val = node->contents();
-		bool& var = * reinterpret_cast<bool*> (ptr);
-		var = (val == "true" || val == "1" || val == "on" || val == "yes");
-	} break;
+		case Config::EBool:
+		{
+			QString val = node->contents();
+			*reinterpret_cast<bool*> (ptr) = (val == "true" || val == "1" || val == "on" || val == "yes");
+			break;
+		}
 
-	case Config::EStringList:
-	{
-		QStringList& var = * reinterpret_cast<QStringList*> (ptr);
+		case Config::EStringList:
+		{
+			for (const XMLNode* subnode : node->subNodes())
+				reinterpret_cast<QStringList*> (ptr)->append (subnode->contents());
+			break;
+		}
 
-		for (const XMLNode * subnode : node->subNodes())
-			var << subnode->contents();
-	} break;
+		case Config::EIntList:
+		{
+			for (const XMLNode* subnode : node->subNodes())
+				reinterpret_cast<QList<int>*> (ptr)->append (subnode->contents().toLong());
+			break;
+		}
 
-	case Config::EIntList:
-	{
-		QList<int>& var = * (reinterpret_cast<QList<int>*> (ptr));
+		case Config::EStringMap:
+		{
+			for (const XMLNode * subnode : node->subNodes())
+				(*reinterpret_cast<Config::StringMap*> (ptr))[subnode->name()] = subnode->contents();
+			break;
+		}
 
-		for (const XMLNode * subnode : node->subNodes())
-			var << subnode->contents().toLong();
-	} break;
-
-	case Config::EStringMap:
-	{
-		Config::StringMap& var = * (reinterpret_cast<Config::StringMap*> (ptr));
-
-		for (const XMLNode * subnode : node->subNodes())
-			var[subnode->name()] = subnode->contents();
-	} break;
-
-	case Config::EFont:
-	{
-		reinterpret_cast<QFont*> (ptr)->fromString (node->contents());
-	} break;
+		case Config::EFont:
+		{
+			reinterpret_cast<QFont*> (ptr)->fromString (node->contents());
+			break;
+		}
 	}
 }
 
@@ -167,8 +165,8 @@ Config::ConfigAdder::ConfigAdder (void* ptr, Config::EDataType type, const char*
 	i->ptr = ptr;
 	i->type = type;
 	i->name = name;
-	i->next = gConfigData;
-	gConfigData = i;
+	i->next = g_configData;
+	g_configData = i;
 
 	atexit (&freeConfigData);
 }
@@ -183,10 +181,10 @@ bool Config::loadFromFile (const QString& fname)
 
 	XMLDocument* doc = XMLDocument::loadFromFile (fname);
 
-	if (!doc)
+	if (doc == null)
 		return false;
 
-	for (ConfigData* i = gConfigData; i; i = i->next)
+	for (ConfigData* i = g_configData; i; i = i->next)
 	{
 		XMLNode* node = doc->navigateTo (QString (i->name).split ("_"));
 
@@ -194,7 +192,7 @@ bool Config::loadFromFile (const QString& fname)
 			loadFromXML (i->ptr, i->type, node);
 	}
 
-	gXMLDocument = doc;
+	g_XMLDocument = doc;
 	return true;
 }
 
@@ -204,15 +202,15 @@ bool Config::loadFromFile (const QString& fname)
 //
 bool Config::saveToFile (const QString& fname)
 {
-	if (gXMLDocument == null)
-		gXMLDocument = XMLDocument::newDocument ("config");
+	if (g_XMLDocument == null)
+		g_XMLDocument = XMLDocument::newDocument ("config");
 
 	print ("Saving configuration to %1...\n", fname);
 
-	for (ConfigData* i = gConfigData; i; i = i->next)
+	for (ConfigData* i = g_configData; i != null; i = i->next)
 		saveElementToXML (i->name, i->ptr, i->type);
 
-	return gXMLDocument->saveToFile (fname);
+	return g_XMLDocument->saveToFile (fname);
 }
 
 // =============================================================================
@@ -221,5 +219,5 @@ bool Config::saveToFile (const QString& fname)
 //
 XMLDocument* Config::getXMLDocument()
 {
-	return gXMLDocument;
+	return g_XMLDocument;
 }

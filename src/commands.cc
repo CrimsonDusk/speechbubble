@@ -27,16 +27,16 @@ static void padArgsTo (QStringList& args, int a)
 // ============================================================================
 //
 static void checkParms (int minparms, int maxparms, QString parmusage,
-	QStringList& args, const CommandInfo* cmdinfo)
+						QStringList& args, const CommandInfo* cmdinfo)
 {
 	if (args.size() < minparms || (maxparms != -1 && args.size() > maxparms))
-		error (format("Too %1 arguments\nUsage: /%2 %3",
-			(args.size() < minparms ? "few" : "many"),
-			cmdinfo->name, parmusage));
-	
+		error (format ("Too %1 arguments\nUsage: /%2 %3",
+					   (args.size() < minparms ? "few" : "many"),
+					   cmdinfo->name, parmusage));
+
 	if (maxparms != -1)
 		padArgsTo (args, maxparms);
-	
+
 	assert (maxparms == -1 || args.size() == maxparms);
 }
 
@@ -52,7 +52,7 @@ static inline void writeRaw (QString text)
 DEFINE_COMMAND (nick)
 {
 	CHECK_PARMS (1, 1, "<newnick>")
-	writeRaw (format("NICK %1\n", args[0]));
+	writeRaw (format ("NICK %1\n", args[0]));
 }
 
 // ============================================================================
@@ -60,7 +60,7 @@ DEFINE_COMMAND (nick)
 DEFINE_COMMAND (join)
 {
 	CHECK_PARMS (1, 2, "<channel> [password]")
-	writeRaw (format("JOIN %1 %2\n", args[0], args[1]));
+	writeRaw (format ("JOIN %1 %2\n", args[0], args[1]));
 }
 
 // ============================================================================
@@ -69,7 +69,7 @@ DEFINE_COMMAND (part)
 {
 	CHECK_PARMS (1, -1, "<channel> [partmessage]")
 	padArgsTo (args, 2);
-	writeRaw (format("PART %1 :%2\n", args[0], subset (args, 1)));
+	writeRaw (format ("PART %1 :%2\n", args[0], subset (args, 1)));
 }
 
 // ============================================================================
@@ -111,7 +111,7 @@ const CommandInfo g_Commands[] =
 //
 const CommandInfo* getCommandByName (const QString& name)
 {
-	for (const CommandInfo& info : g_Commands)
+	for (const CommandInfo & info : g_Commands)
 		if (info.name == name.toLower())
 			return &info;
 
