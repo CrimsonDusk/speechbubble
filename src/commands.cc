@@ -2,6 +2,7 @@
 #include "context.h"
 #include "connection.h"
 #include "misc.h"
+#include "user.h"
 
 #define COMMAND_FUNCTION_NAME(N) CommandDefinition_##N
 #define DEFINE_COMMAND(N) static void COMMAND_FUNCTION_NAME(N) (QStringList args, const CommandInfo* cmdinfo)
@@ -38,6 +39,25 @@ static void checkParms (int minparms, int maxparms, QString parmusage,
 		padArgsTo (args, maxparms);
 
 	assert (maxparms == -1 || args.size() == maxparms);
+}
+
+static QString currentTarget()
+{
+	Context* const ctx = Context::currentContext();
+
+	switch (ctx->type())
+	{
+	case CTX_Channel:
+		return ctx->target().chan->name();
+
+	case CTX_Query:
+		return ctx->target().user->nickname();
+
+	case CTX_Server:
+		error ("this command cannot be run in server contexts");
+	}
+
+	return "";
 }
 
 // ============================================================================
@@ -88,6 +108,20 @@ DEFINE_COMMAND (quote)
 
 // ============================================================================
 //
+DEFINE_COMMAND (me)
+{
+	IRCConnection* conn = Context::currentContext()->connection();
+
+	if (conn == null)
+		error ("cannot use /me here");
+
+	QString act = args.join (" ");
+	writeRaw (format ("PRIVMSG %1 :\001ACTION %2\001\n", currentTarget(), act));
+	Context::currentContext()->writeIRCAction (conn->ourselves()->nickname(), act);
+}
+
+// ============================================================================
+//
 // Command aliases
 //
 ALIAS_COMMAND (j,	join)
@@ -105,6 +139,7 @@ const CommandInfo g_Commands[] =
 	DECLARE_COMMAND (part)
 	DECLARE_COMMAND (quote)
 	DECLARE_COMMAND (raw)
+	DECLARE_COMMAND (me)
 };
 
 // ============================================================================

@@ -418,3 +418,12 @@ void Context::writeIRCMessage (QString from, QString msg)
 	rawPrint (format ("<\\b%1\\b> ", from), true);
 	rawPrint (msg + "\n", false);
 }
+
+// =============================================================================
+//
+void Context::writeIRCAction (QString from, QString msg)
+{
+	printTimestamp();
+	rawPrint (format ("* \\b%1\\b ", from), true);
+	rawPrint (msg + "\n", false);
+}

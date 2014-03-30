@@ -339,6 +339,19 @@ void IRCConnection::processPrivmsg (QString msg, QStringList tokens)
 		ctx = chan->context();
 	}
 
+	// Handle /me here
+	if (message.startsWith ("\001ACTION "))
+	{
+		message.remove (0, strlen ("\001ACTION "));
+
+		// /me is CTCP and should end with \001 but that's not always the case.
+		if (message.endsWith ("\001"))
+			message.chop (1);
+
+		ctx->writeIRCAction (usernick, message);
+		return;
+	}
+
 	ctx->writeIRCMessage (usernick, message);
 }
 

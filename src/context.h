@@ -54,6 +54,7 @@ public:
 	void							print (QString text);
 	void							updateTreeItem();
 	void							writeIRCMessage (QString from, QString msg);
+	void							writeIRCAction (QString from, QString msg);
 
 	static Context*					fromTreeWidgetItem (QTreeWidgetItem* item);
 	static const QList<Context*>&	allContexts();
