@@ -7,6 +7,9 @@ class QPaintEvent;
 class SBLineEdit : public QLineEdit
 {
 public:
+	using	Self = SBLineEdit;
+	using	Super = QLineEdit;
+
 	explicit SBLineEdit (QWidget* parent = null);
 	explicit SBLineEdit (const QString& text, QWidget* parent = null);
 	SBLineEdit (const QLineEdit&) = delete;
@@ -15,4 +18,5 @@ public:
 
 protected:
 	void		keyPressEvent (QKeyEvent* ev) override;
+	void		paintEvent (QPaintEvent* ev) override;
 };

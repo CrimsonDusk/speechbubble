@@ -2,10 +2,10 @@
 #include <QPaintEvent>
 
 SBLineEdit::SBLineEdit (QWidget* parent) :
-	QLineEdit (parent) {}
+	Super (parent) {}
 
 SBLineEdit::SBLineEdit (const QString& text, QWidget* parent) :
-	QLineEdit (text, parent) {}
+	Super (text, parent) {}
 
 QVariant SBLineEdit::inputMethodQuery (Qt::InputMethodQuery type) const
 {
@@ -21,12 +21,43 @@ QVariant SBLineEdit::inputMethodQuery (Qt::InputMethodQuery type) const
 
 void SBLineEdit::keyPressEvent (QKeyEvent* ev)
 {
-	if (ev->modifiers() & Qt::ControlModifier && ev->key() == Qt::Key_B)
+	if (ev->modifiers() & Qt::ControlModifier)
 	{
-		insert (BOLD_STR);
+		switch (ev->key())
+		{
+			case Qt::Key_B:
+				insert (BOLD_STR);
+				break;
+
+			case Qt::Key_U:
+				insert (UNDERLINE_STR);
+				break;
+
+			case Qt::Key_R:
+				insert (REVERSE_STR);
+				break;
+
+			case Qt::Key_K:
+				insert (COLOR_STR);
+				break;
+
+			case Qt::Key_O:
+				insert (NORMAL_STR);
+				break;
+
+			default:
+				goto defaultbehavior;
+		}
+
 		ev->accept();
 		return;
 	}
 
-	QLineEdit::keyPressEvent (ev);
+defaultbehavior:
+	Super::keyPressEvent (ev);
+}
+
+void SBLineEdit::paintEvent (QPaintEvent* ev)
+{
+	Super::paintEvent (ev);
 }
