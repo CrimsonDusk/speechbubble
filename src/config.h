@@ -16,8 +16,10 @@ class XMLDocument;
 
 // =========================================================
 namespace Config
-{	enum EDataType
-	{	EInt,
+{
+	enum EDataType
+	{
+		EInt,
 		EString,
 		EFloat,
 		EBool,
@@ -28,31 +30,32 @@ namespace Config
 	};
 
 	struct ConfigData
-	{	void* ptr;
+	{
+		void* ptr;
 		EDataType type;
 		const char* name;
 		ConfigData* next;
 	};
 
 	// Type-definitions for the above enum list
-	typedef int Int;
-	typedef QString String;
-	typedef float Float;
-	typedef bool Bool;
-	typedef QList<int> IntList;
-	typedef QStringList StringList;
-	typedef QMap<QString, QString> StringMap;
-	typedef QFont Font;
+	using Int			= int;
+	using String		= QString;
+	using Float			= float;
+	using Bool			= bool;
+	using IntList		= QList<int>;
+	using StringList	= QStringList;
+	using StringMap		= QMap<QString, QString>;
+	using Font			= QFont;
 
 	// ------------------------------------------
-	bool           loadFromFile (QString fname);
-	bool           saveToFile (QString fname);
-	void				freeConfigData();
-	XMLDocument*   xml();
+	bool			loadFromFile (const QString& fname);
+	bool			saveToFile (const QString& fname);
+	XMLDocument*	getXMLDocument();
 
 	class ConfigAdder
-	{	public:
-			ConfigAdder (void* ptr, EDataType type, const char* name);
+	{
+	public:
+		ConfigAdder (void* ptr, EDataType type, const char* name);
 	};
 };
 

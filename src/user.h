@@ -5,38 +5,45 @@
 #include "channel.h"
 
 class Context;
+class Context;
 class IRCConnection;
 
 class IRCUser
-{	public:
-		enum Flag
-		{	Away     = (1 << 0),    // is /AWAY
-			IRCOp    = (1 << 1),    // is an IRC Op
-		};
+{
+public:
+	enum Flag
+	{
+		FAway     		= (1 << 0),		// is /AWAY
+		FIRCOp    		= (1 << 1),		// is an IRC Op
+		FDoNotDelete	= (1 << 2),		// don't delete if last known channel goes
+	};
 
-		Q_DECLARE_FLAGS (Flags, Flag)
+	Q_DECLARE_FLAGS (Flags, Flag)
 
-	PROPERTY (public,  QString,					Nickname)
-	PROPERTY (public,  QString,					Username)
-	PROPERTY (public,  QString,					Hostname)
-	PROPERTY (public,  QString,					Realname)
-	PROPERTY (public,  Flags,						Flags)
-	PROPERTY (public,  Context*,					Context)
-	PROPERTY (private, IRCConnection*,			Connection)
-	PROPERTY (private, QList<IRCChannel*>,		Channels)
+	// =========================================================================
+	//
+	PROPERTY (public,	QString,			nickname,	setNickname,	STOCK_WRITE)
+	PROPERTY (public, 	QString,			username,	setUsername,	STOCK_WRITE)
+	PROPERTY (public,	QString,			hostname,	setHostname,	STOCK_WRITE)
+	PROPERTY (public,	QString,			realname,	setRealname,	STOCK_WRITE)
+	PROPERTY (public,	Flags,				flags,		setFlags,		STOCK_WRITE)
+	PROPERTY (private,	IRCConnection*,		connection,	setConnection,	STOCK_WRITE)
+	PROPERTY (private,	QList<IRCChannel*>,	channels,	setChannels,	STOCK_WRITE)
+	PROPERTY (public,	Context*,			context,	setContext,		STOCK_WRITE)
 
-	public:
-		IRCUser (IRCConnection* conn) :
-			m_Flags (0),
-			m_Context (null),
-			m_Connection (conn) {}
-		~IRCUser();
+public:
+	IRCUser (IRCConnection* conn) :
+		m_flags (0),
+		m_connection (conn) {}
 
-		void               	addKnownChannel (IRCChannel* chan);
-		IRCChannel::EStatus	getStatusInChannel (IRCChannel* chan);
-		void        			dropKnownChannel (IRCChannel* chan);
-		QString					getStringRep() const;
-		QString					getUserhost() const;
+	~IRCUser();
+
+	void        addKnownChannel (IRCChannel* chan);
+	void		checkForPruning();
+	EStatus		getStatusInChannel (IRCChannel* chan);
+	void		dropKnownChannel (IRCChannel* chan);
+	QString		describe() const;
+	QString		userHost() const;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS (IRCUser::Flags)

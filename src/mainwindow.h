@@ -10,9 +10,9 @@ class Context;
 class Ui_MainWindow;
 
 class MainWindow : public QMainWindow
-{	Q_OBJECT
-
-	PROPERTY (private, bool, CtrlPressed)
+{
+	Q_OBJECT
+	PROPERTY (private, bool, isCtrlPressed,	setCtrlPressed,	STOCK_WRITE)
 
 	public:
 		explicit MainWindow (QWidget* parent = 0, Qt::WindowFlags flags = 0);
@@ -26,6 +26,9 @@ class MainWindow : public QMainWindow
 		void actionConnectTo();
 		void actionDisconnect();
 		void actionQuit();
+		void actionBanList();
+		void actionExceptList();
+		void actionInviteList();
 		void contextSelected (QTreeWidgetItem* item);
 		void inputEnterPressed();
 		void updateUserlist();

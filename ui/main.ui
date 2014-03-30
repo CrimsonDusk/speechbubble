@@ -33,6 +33,9 @@
        <layout class="QHBoxLayout" name="horizontalLayout" stretch="4,1">
         <item>
          <widget class="QTextEdit" name="m_output">
+          <property name="verticalScrollBarPolicy">
+           <enum>Qt::ScrollBarAlwaysOn</enum>
+          </property>
           <property name="readOnly">
            <bool>true</bool>
           </property>
@@ -56,7 +59,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>23</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSpeechbubble">
@@ -68,7 +71,16 @@
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
+   <widget class="QMenu" name="menuActions">
+    <property name="title">
+     <string>Actions</string>
+    </property>
+    <addaction name="actionBanList"/>
+    <addaction name="actionExceptList"/>
+    <addaction name="actionInviteList"/>
+   </widget>
    <addaction name="menuSpeechbubble"/>
+   <addaction name="menuActions"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -97,6 +109,21 @@
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
+   </property>
+  </action>
+  <action name="actionBanList">
+   <property name="text">
+    <string>View banlist</string>
+   </property>
+  </action>
+  <action name="actionExceptList">
+   <property name="text">
+    <string>View ban exception list</string>
+   </property>
+  </action>
+  <action name="actionInviteList">
+   <property name="text">
+    <string>View invite list</string>
    </property>
   </action>
  </widget>

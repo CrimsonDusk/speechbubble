@@ -4,26 +4,30 @@
 #include "main.h"
 
 struct CommandInfo;
-typedef void (*CommandFunction) (QStringList, const CommandInfo*);
+using CommandFunction = void (*) (QStringList, const CommandInfo*);
 
 struct CommandInfo
-{	QString				name;
+{
+	QString			name;
 	CommandFunction	func;
 };
 
-extern const CommandInfo	g_Commands[];
-extern const int				g_NumCommands;
-
 class CommandError : public std::exception
-{	public:
-		CommandError (QString error) : m_error (error) {}
-
+{
+	public:
+		CommandError (QString error) :
+			mError (error) {}
+		
 		virtual inline const char* what() const throw()
-		{	return m_error.toStdString().c_str();
+		{
+			return mError.toStdString().c_str();
 		}
-
+	
 	private:
-		QString m_error;
+		QString mError;
 };
 
+const CommandInfo* getCommandByName (const QString& name);
+
 #endif // COMMANDS_H
+

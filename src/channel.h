@@ -1,5 +1,5 @@
-#ifndef COBALT_IRC_CHANNEL_H
-#define COBALT_IRC_CHANNEL_H
+#ifndef SPEECHBUBBLE_CHANNEL_H
+#define SPEECHBUBBLE_CHANNEL_H
 
 #include <QTime>
 #include "main.h"
@@ -8,136 +8,74 @@ class Context;
 class IRCConnection;
 class IRCUser;
 
-enum EChanMode
-{	EChanModeAllInvite,
-	EChanModeBan,
-	EChanModeBlockCaps,
-	EChanModeBlockColors,
-	EChanModeBlockCTCP,
-	EChanModeDelayedJoin,
-	EChanModeBanExempt,
-	EChanModeFloodKick,
-	EChanModeNickFlood,
-	EChanModeWordCensor,
-	EChanModeNetworkCensor,
-	EChanModeInviteOnly,
-	EChanModeKickNoRejoin,
-	EChanModeLocked,
-	EChanModeNoKnock,
-	EChanModeUserLimit,
-	EChanModeRedirect,
-	EChanModeModerated,
-	EChanModeRegisterSpeak,
-	EChanModeNoExtMessages,
-	EChanModeNoNickChanges,
-	EChanModeChanOp,
-	EChanModeOpersOnly,
-	EChanModePrivate,
-	EChanModePermanent,
-	EChanModeChanOwner,
-	EChanModeNoKick,
-	EChanModeRegisterJoin,
-	EChanModeSecret,
-	EChanModeStripColors,
-	EChanModeTopicLock,
-	EChanModeBlockNotice,
-	EChanModeAuditorium,
-	EChanModeUserVoice,
-	EChanModeIRCOpInChannel,
-	EChanModeSecure,
-	EChanModeChanHalfOp,
-	EChanModeHistory,
-	EChanModeJoinFlood,
-	EChanModeInviteExcept,
-	EChanModeDelayedMessage,
-	EChanModeAutoOp,
-	EChanModeNamedMode,
-	EChanModeIRCOpOJoin,
-	EChanModeGenericRestrict,
+// =============================================================================
+//
+enum EStatus
+{
+	FNormal = (0),
+	FVoiced = (1 << 0),
+	FHalfOp = (1 << 1),
+	FOp     = (1 << 2),
+	FAdmin  = (1 << 3),
+	FOwner  = (1 << 4),
+};
+
+Q_DECLARE_FLAGS (FStatusFlags, EStatus)
+Q_DECLARE_OPERATORS_FOR_FLAGS (FStatusFlags)
+
+// =============================================================================
+//
+class UserlistEntry
+{
+	PROPERTY (public, IRCUser*,			userInfo,	setUserInfo,	STOCK_WRITE)
+	PROPERTY (public, FStatusFlags,		status,		setStatus,		STOCK_WRITE)
+
+public:
+	UserlistEntry (IRCUser* user, FStatusFlags stat) :
+		m_userInfo (user),
+		m_status (stat) {}
+
+	bool operator== (const UserlistEntry& other) const;
 };
 
 // =========================================================================
-// -------------------------------------------------------------------------
-struct ChannelModeInfo
-{	const char c;
-	const EChanMode mode;
-	const QString name;
-	const bool hasArg;
-};
-
-// =========================================================================
-// -------------------------------------------------------------------------
-struct ChannelMode
-{	const ChannelModeInfo* info;
-	QString arg;
-};
-
+//
 class IRCChannel : public QObject
-{	Q_OBJECT
+{
+	Q_OBJECT
+	PROPERTY (public,  QString,					name,		setName,		STOCK_WRITE)
+	PROPERTY (public,  QString,					topic,		setTopic,		STOCK_WRITE)
+	PROPERTY (public,  QTime,					joinTime,	setJoinTime,	STOCK_WRITE)
+	PROPERTY (public,  Context*,				context,	setContext,		STOCK_WRITE)
+	PROPERTY (private, IRCConnection*,			connection,	setConnection,	STOCK_WRITE)
+	PROPERTY (private, QList<UserlistEntry>,	userlist,	setUserlist,	STOCK_WRITE)
+	PROPERTY (private, QList<char>,				modes,		setModes,		STOCK_WRITE)
 
-	public:
-		// =========================================================================
-		// -------------------------------------------------------------------------
-		enum EStatus
-		{	FNormal = (0),
-			FVoiced = (1 << 0),
-			FHalfOp = (1 << 1),
-			FOp     = (1 << 2),
-			FAdmin  = (1 << 3),
-			FOwner  = (1 << 4),
-		};
+public:
+	IRCChannel (IRCConnection* conn, const QString& newname);
+	~IRCChannel();
 
-		Q_DECLARE_FLAGS (FStatusFlags, EStatus)
+	UserlistEntry*			addUser (IRCUser* info);
+	void					addNames (const QStringList& names);
+	void					applyModeString (QString text);
+	UserlistEntry*			findUserByName (QString name);
+	UserlistEntry*			findUser (IRCUser* info);
+	QString					getModeString() const;
+	FStatusFlags			getStatusOf (IRCUser* info);
+	EStatus					getEffectiveStatusOf (IRCUser* info);
+	void					namesDone();
+	void					removeUser (IRCUser* info);
 
-		// =========================================================================
-		// -------------------------------------------------------------------------
-		class Entry
-		{	PROPERTY (public, IRCUser*, UserInfo)
-			PROPERTY (public, IRCChannel::FStatusFlags, Status)
+	static EStatus			effectiveStatus (FStatusFlags mode);
+	static FStatusFlags		getStatusFlag (char c);
+	static QString			getStatusName (FStatusFlags mode);
 
-			public:
-				Entry (IRCUser* user, EStatus stat) :
-					m_UserInfo (user),
-					m_Status (stat) {}
+signals:
+	void userlistChanged();
 
-				bool operator== (const Entry& other) const;
-		};
-
-	// =========================================================================
-	// -------------------------------------------------------------------------
-	PROPERTY (public,  QString,					Name)
-	PROPERTY (public,  QString,					Topic)
-	PROPERTY (public,  QTime,						JoinTime)
-	PROPERTY (public,  Context*,					Context)
-	PROPERTY (private, IRCConnection*,			Connection)
-	PROPERTY (private, QList<Entry>,				Userlist)
-	PROPERTY (private, QList<ChannelMode>,		Modes)
-	PROPERTY (private, QStringList,				Banlist)
-	PROPERTY (private, QStringList,				Whitelist)
-	PROPERTY (private, QStringList,				Invitelist)
-
-	public:
-		IRCChannel (IRCConnection* conn, QString name);
-		~IRCChannel();
-
-		Entry*					addUser (IRCUser* info);
-		void						applyModeString (QString text);
-		void						removeUser (IRCUser* info);
-		Entry*					findUserByName (QString name);
-		Entry*					findUser (IRCUser* info);
-		QString					getModeString() const;
-		FStatusFlags			getStatusOf (IRCUser* info);
-		EStatus					getEffectiveStatusOf (IRCUser* info);
-		ChannelMode*			getMode (EChanMode modenum);
-
-		static EStatus			effectiveStatus (FStatusFlags mode);
-		static FStatusFlags	getStatusFlag (char c);
-		static QString			getStatusName (FStatusFlags mode);
-
-	signals:
-		void userlistChanged();
+private:
+	QList<UserlistEntry>	m_newNames;
+	bool					m_namesDone;
 };
 
-Q_DECLARE_OPERATORS_FOR_FLAGS (IRCChannel::FStatusFlags)
-
-#endif // COBALT_IRC_CHANNEL_H
+#endif // SPEECHBUBBLE_CHANNEL_H

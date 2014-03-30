@@ -3,43 +3,65 @@
 #include "connection.h"
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 IRCUser::~IRCUser()
-{	getConnection()->forgetUser (this);
+{
+	m_flags |= FDoNotDelete;
+	connection()->forgetUser (this);
+
+	for (IRCChannel * chan : channels())
+		chan->removeUser (this);
 }
 
 // =============================================================================
+//
 // Determine status level of this user.
-// -----------------------------------------------------------------------------
-IRCChannel::EStatus IRCUser::getStatusInChannel (IRCChannel* chan)
-{	return chan->getEffectiveStatusOf (this);
+//
+EStatus IRCUser::getStatusInChannel (IRCChannel* chan)
+{
+	return chan->getEffectiveStatusOf (this);
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
-QString IRCUser::getUserhost() const
-{	return fmt ("%1!%2@%3", getNickname(), getUsername(), getHostname());
+//
+QString IRCUser::userHost() const
+{
+	return format ("%1!%2@%3", nickname(), username(), hostname());
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
-QString IRCUser::getStringRep() const
-{	return fmt ("%1 (%2)", getUserhost(), getRealname());
+//
+QString IRCUser::describe() const
+{
+	return format ("%1 (%2)", userHost(), realname());
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 void IRCUser::addKnownChannel (IRCChannel* chan)
-{	m_Channels << chan;
+{
+	m_channels << chan;
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 void IRCUser::dropKnownChannel (IRCChannel* chan)
-{	m_Channels.removeOne (chan);
+{
+	m_channels.removeOne (chan);
+	checkForPruning();
+}
 
-	// If this user left the last channel we are also in, forget this user now. We
-	// won't know when he will disconnect. Obviously don't remove ourselves!
-	if (this != getConnection()->getOurselves() && m_Channels.isEmpty())
+// =============================================================================
+//
+// Prune this user if there's no reason to remember them anymore.
+//
+void IRCUser::checkForPruning()
+{
+	if ((this != connection()->ourselves()) &&
+		(channels().isEmpty()) &&
+		(context() == null) &&
+		(flags() & FDoNotDelete) == 0)
+	{
 		delete this;
+	}
 }

@@ -19,7 +19,8 @@ static bool g_crashCatcherActive = false;
 static QString g_assertionFailure;
 
 // List of signals to catch and crash on
-static QList<int> g_signalsToCatch ({
+static QList<int> g_signalsToCatch (
+{
 	SIGSEGV, // segmentation fault
 	SIGABRT, // abort() calls
 	SIGFPE, // floating point exceptions (e.g. division by zero)
@@ -27,9 +28,10 @@ static QList<int> g_signalsToCatch ({
 });
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 static void bombBox (const QString& message)
-{	QDialog dlg;
+{
+	QDialog dlg;
 	Ui_BombBox ui;
 	ui.setupUi (&dlg);
 	ui.m_text->setText (message);
@@ -38,12 +40,14 @@ static void bombBox (const QString& message)
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 static void handleCrash (int sig)
-{	printf ("%s: crashed with signal %d, launching gdb\n", __func__, sig);
+{
+	printf ("%s: crashed with signal %d, launching gdb\n", __func__, sig);
 
 	if (g_crashCatcherActive)
-	{	printf ("caught signal while crash catcher is active!\n");
+	{
+		printf ("caught signal while crash catcher is active!\n");
 		exit (149);
 	}
 
@@ -53,7 +57,8 @@ static void handleCrash (int sig)
 	g_crashCatcherActive = true;
 
 	if (commandsFile.open())
-	{	commandsFile.write (fmt ("attach %1\n", pid).toLocal8Bit());
+	{
+		commandsFile.write (format("attach %1\n", pid).toLocal8Bit());
 		commandsFile.write (QString ("backtrace full\n").toLocal8Bit());
 		commandsFile.write (QString ("detach\n").toLocal8Bit());
 		commandsFile.write (QString ("quit").toLocal8Bit());
@@ -61,7 +66,7 @@ static void handleCrash (int sig)
 		commandsFile.close();
 	}
 
-	QStringList args ({"-x", commandsFile.fileName()});
+	QStringList args ( {"-x", commandsFile.fileName() });
 
 	proc.start ("gdb", args);
 
@@ -74,17 +79,18 @@ static void handleCrash (int sig)
 	QString output = QString (proc.readAllStandardOutput());
 	QString err = QString (proc.readAllStandardError());
 
-	bombBox (fmt ("<h3>Program crashed with signal %1</h3>\n\n"
-		"%2"
-		"<p><b>GDB <tt>stdout</tt>:</b></p><pre>%3</pre>\n"
-		"<p><b>GDB <tt>stderr</tt>:</b></p><pre>%4</pre>",
-		sig, (!g_assertionFailure.isEmpty()) ? g_assertionFailure : "", output, err));
+	bombBox (format("<h3>Program crashed with signal %1</h3>\n\n"
+				  "%2"
+				  "<p><b>GDB <tt>stdout</tt>:</b></p><pre>%3</pre>\n"
+				  "<p><b>GDB <tt>stderr</tt>:</b></p><pre>%4</pre>",
+				  sig, (!g_assertionFailure.isEmpty()) ? g_assertionFailure : "", output, err));
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 void initCrashCatcher()
-{	struct sigaction sighandler;
+{
+	struct sigaction sighandler;
 	sighandler.sa_handler = &handleCrash;
 	sighandler.sa_flags = 0;
 	sigemptyset (&sighandler.sa_mask);
@@ -92,7 +98,7 @@ void initCrashCatcher()
 	for (int sig : g_signalsToCatch)
 		sigaction (sig, &sighandler, null);
 
-	log ("%1: crash catcher hooked to signals: %2\n", __func__, g_signalsToCatch);
+	print ("%1: crash catcher hooked to signals: %2\n", __func__, g_signalsToCatch);
 }
 #endif // #ifdef __unix__
 
@@ -101,9 +107,10 @@ void initCrashCatcher()
 // the bomb box straight in Windows while in Linux we let abort() trigger the
 // signal handler, which will cause the usual bomb box with GDB diagnostics.
 // Said prompt will embed the assertion failure information.
-// -----------------------------------------------------------------------------
+//
 void assertionFailure (const char* file, int line, const char* funcname, const char* expr)
-{	QString errmsg = fmt (
+{
+	QString errmsg = format(
 		"<p><b>File</b>: <tt>%1</tt><br />"
 		"<b>Line</b>: <tt>%2</tt><br />"
 		"<b>Function</b>: <tt>%3</tt></p>"

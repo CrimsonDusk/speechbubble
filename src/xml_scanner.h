@@ -4,36 +4,43 @@
 #include "main.h"
 
 class XMLScanner
-{	public:
-		enum EToken
-		{	EHeaderStart,
-			EHeaderEnd,
-			ETagCloser,
-			ETagSelfCloser,
-			ETagStart,
-			ETagEnd,
-			ECData,
-			EEquals,
-			ESymbol,
-			EString
-		};
+{
+public:
+	enum EToken
+	{
+		EHeaderStart,
+		EHeaderEnd,
+		ETagCloser,
+		ETagSelfCloser,
+		ETagStart,
+		ETagEnd,
+		ECData,
+		EEquals,
+		ESymbol,
+		EString
+	};
 
-	PROPERTY (private, const char*,  Data);
-	PROPERTY (private, const char*,  Position);
-	PROPERTY (private, QString,      Token);
-	PROPERTY (private, EToken,       TokenType);
-	PROPERTY (private, bool,         IsInsideTag);
-	PROPERTY (private, int,          Line)
+	PROPERTY (private, const char*,	data,			setData,		STOCK_WRITE)
+	PROPERTY (private, const char*,	position,		setPosition,	STOCK_WRITE)
+	PROPERTY (private, QString,		token,			setToken,		STOCK_WRITE)
+	PROPERTY (private, EToken,		tokenType,		setTokenType,	STOCK_WRITE)
+	PROPERTY (private, bool,        isInsideTag,	setInsideTag,	STOCK_WRITE)
+	PROPERTY (private, int,			lineNumber,		setLineNumber,	STOCK_WRITE)
 
-	public:
-		XMLScanner (const char* data);
+public:
+	XMLScanner (const char* data);
 
-		bool scanNextToken();
-		bool scanNextToken (EToken tok);
-		void mustScanNext (EToken tok);
+	bool scanNextToken();
+	bool scanNextToken (EToken tok);
+	void mustScanNext (EToken tok);
 
-	private:
-		bool checkString (const char* c, bool peek = false);
+private:
+	bool checkString (const char* c, bool peek = false);
+
+	inline void increasePosition()
+	{
+		m_position++;
+	}
 };
 
 #endif // LIBCOBALTCORE_XML_SCANNER_H

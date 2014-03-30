@@ -1,5 +1,6 @@
 #include <cstdio>
-#include <qstringlist.h>
+#include <QVector>
+#include <QStringList>
 #include "main.h"
 #include "xml_document.h"
 #include "format.h"
@@ -7,61 +8,69 @@
 #include "misc.h"
 
 // =============================================================================
-// -----------------------------------------------------------------------------
-static QString					g_XMLError;
-static QVector<XMLNode*>	g_Stack;
-static int						g_SaveStack;
+//
+static QString				g_errorString;
+static QVector<XMLNode*>	g_stack;
+static int					g_saveStack;
 
 static const struct
-{	const char* decoded, *encoded;
+{
+	const char* decoded, *encoded;
 } g_encodingConversions[] =
-{	{"&",  "&amp;"},
+{
+	{"&",  "&amp;"},
 	{"<",  "&lt;"},
 	{">",  "&gt;"},
 	{"\"", "&quot;"}
 };
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 static XMLNode* topStackNode()
-{	if (g_Stack.size() == 0)
+{
+	if (g_stack.size() == 0)
 		return null;
 
-	return g_Stack.last();
+	return g_stack.last();
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 XMLDocument::XMLDocument (XMLNode* root) :
-	m_Root (root)
-{	m_Header["version"] = "1.0";
-	m_Header["encoding"] = "UTF-8";
+	m_root (root)
+{
+	m_header["version"] = "1.0";
+	m_header["encoding"] = "UTF-8";
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 XMLDocument::~XMLDocument()
-{	delete m_Root;
+{
+	delete m_root;
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 XMLDocument* XMLDocument::newDocument (QString rootName)
-{	return new XMLDocument (new XMLNode (rootName, null));
+{
+	return new XMLDocument (new XMLNode (rootName, null));
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 XMLDocument* XMLDocument::loadFromFile (QString fname)
-{	FILE*			fp = null;
+{
+	FILE*			fp = null;
 	long			fsize;
 	char*			buf = null;
 	XMLNode*		root = null;
-	HeaderType	header;
+	HeaderType		header;
 
 	try
-	{	if ((fp = fopen (fname.toStdString().c_str(), "r")) == null)
-			throw XMLError (fmt ("couldn't open %1 for reading: %2", fname, strerror (errno)));
+	{
+		if ((fp = fopen (fname.toStdString().c_str(), "r")) == null)
+			throw format ("couldn't open %1 for reading: %2", fname, strerror (errno));
 
 		fseek (fp, 0l, SEEK_END);
 		fsize = ftell (fp);
@@ -69,7 +78,7 @@ XMLDocument* XMLDocument::loadFromFile (QString fname)
 		buf = new char[fsize + 1];
 
 		if ((long) fread (buf, 1, fsize, fp) < fsize)
-			throw XMLError (fmt ("I/O error while opening %1", fname));
+			throw format ("I/O error while opening %1", fname);
 
 		buf[fsize] = '\0';
 		fclose (fp);
@@ -78,71 +87,84 @@ XMLDocument* XMLDocument::loadFromFile (QString fname)
 		scan.mustScanNext (XMLScanner::EHeaderStart);
 
 		while (scan.scanNextToken (XMLScanner::ESymbol))
-		{	QString attrname = scan.getToken();
+		{
+			QString attrname = scan.token();
 			scan.mustScanNext (XMLScanner::EEquals);
 			scan.mustScanNext (XMLScanner::EString);
-			header[attrname] = scan.getToken();
+			header[attrname] = scan.token();
 		}
 
 		scan.mustScanNext (XMLScanner::EHeaderEnd);
 
 		if (header.find ("version") == header.end())
-			throw XMLError ("No version defined in header!");
+			throw QString ("No version defined in header!");
 
 		while (scan.scanNextToken())
-		{	switch (scan.getTokenType())
-			{	case XMLScanner::ETagStart:
-				{	scan.mustScanNext (XMLScanner::ESymbol);
-					XMLNode* node = new XMLNode (scan.getToken(), topStackNode());
+		{
+			switch (scan.tokenType())
+			{
+				case XMLScanner::ETagStart:
+				{
+					scan.mustScanNext (XMLScanner::ESymbol);
+					XMLNode* node = new XMLNode (scan.token(), topStackNode());
 
-					if (g_Stack.size() == 0)
-					{	if (root != null)
-						{	// XML forbids having multiple roots
+					if (g_stack.size() == 0)
+					{
+						if (root != null)
+						{
+							// XML forbids having multiple roots
 							delete node;
-							throw XMLError ("Multiple root nodes");
+							throw std::logic_error ("Multiple root nodes");
 						}
 
 						root = node;
 					}
 
-					g_Stack << node;
+					g_stack << node;
 
 					while (scan.scanNextToken (XMLScanner::ESymbol))
-					{	QString attrname = scan.getToken();
+					{
+						QString attrname = scan.token();
 						scan.mustScanNext (XMLScanner::EEquals);
 						scan.mustScanNext (XMLScanner::EString);
-						node->setAttribute (attrname, scan.getToken());
+						node->setAttribute (attrname, scan.token());
 						assert (node->hasAttribute (attrname));
 					}
 
 					if (scan.scanNextToken (XMLScanner::ETagSelfCloser))
-					{	XMLNode* popee;
-						assert (pop (g_Stack, popee) && popee == node);
+					{
+						XMLNode* popee;
+						assert (pop (g_stack, popee) && popee == node);
 					}
 					else
 						scan.mustScanNext (XMLScanner::ETagEnd);
-				} break;
+				}
+				break;
 
 				case XMLScanner::ETagCloser:
-				{	scan.mustScanNext (XMLScanner::ESymbol);
+				{
+					scan.mustScanNext (XMLScanner::ESymbol);
 					XMLNode* popee;
 
-					if (!pop (g_Stack, popee) || popee->getName() != scan.getToken())
-						throw XMLError ("Misplaced closing tag");
+					if (!pop (g_stack, popee) || popee->name() != scan.token())
+						throw std::logic_error ("Misplaced closing tag");
 
 					scan.mustScanNext (XMLScanner::ETagEnd);
-				} break;
+				}
+				break;
 
 				case XMLScanner::ECData:
 				case XMLScanner::ESymbol:
-				{	if (g_Stack.size() == 0)
-						throw XMLError ("Misplaced CDATA/symbol");
+				{
+					if (g_stack.size() == 0)
+						throw std::logic_error ("Misplaced CDATA/symbol");
 
-						XMLNode* node = g_Stack[g_Stack.size() - 1];
+					XMLNode* node = g_stack[g_stack.size() - 1];
 
-					node->setIsCData (scan.getTokenType() == XMLScanner::ECData);
-					node->setContents (node->getIsCData() ? decodeString (scan.getToken()) : scan.getToken());
-				} break;
+					node->setCData (scan.tokenType() == XMLScanner::ECData);
+					node->setContents (node->isCData() ? decodeString (scan.token()) : scan.token());
+				}
+				break;
 
 				case XMLScanner::EString:
 				case XMLScanner::EHeaderStart:
@@ -150,16 +172,18 @@ XMLDocument* XMLDocument::loadFromFile (QString fname)
 				case XMLScanner::EEquals:
 				case XMLScanner::ETagSelfCloser:
 				case XMLScanner::ETagEnd:
-				{	throw XMLError (fmt ("Unexpected token '%1'", scan.getToken()));
-				} break;
+					throw format ("Unexpected token '%1'", scan.token());
+					break;
 			}
 		}
-	} catch (XMLError& e)
-	{	g_XMLError = e.getError();
+	}
+	catch (QString e)
+	{
+		g_errorString = e;
 		delete[] buf;
 		delete root;
 
-		if (fp)
+		if (fp != null)
 			fclose (fp);
 
 		return null;
@@ -172,72 +196,79 @@ XMLDocument* XMLDocument::loadFromFile (QString fname)
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 bool XMLDocument::saveToFile (QString fname) const
-{	FILE* fp;
+{
+	FILE* fp;
 
-	if ((fp = fopen (fname.toStdString().c_str(), "w")) == null)
+	if ( (fp = fopen (fname.toStdString().c_str(), "w")) == null)
 		return false;
 
-	flog (fp, "<?xml");
+	fprint (fp, "<?xml");
 
-	for (auto it = getHeader().begin(); it != getHeader().end(); ++it)
-		flog (fp, " %1=\"%2\"", it.key(), it.value());
+	for (auto it = header().begin(); it != header().end(); ++it)
+		fprint (fp, " %1=\"%2\"", it.key(), it.value());
 
-	flog (fp, " ?>\n");
-	g_SaveStack = 0;
-	writeNode (fp, getRoot());
+	fprint (fp, " ?>\n");
+	g_saveStack = 0;
+	writeNode (fp, root());
 	fclose (fp);
 	return true;
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 void XMLDocument::writeNode (FILE* fp, const XMLNode* node) const
-{	QString indent;
+{
+	QString indent;
 
-	for (int i = 0; i < g_SaveStack; ++i)
+	for (int i = 0; i < g_saveStack; ++i)
 		indent += "\t";
 
-	flog (fp, "%1<%2", indent, node->getName());
+	fprint (fp, "%1<%2", indent, node->name());
 
-	for (auto it = node->getAttributes().begin(); it != node->getAttributes().end(); ++it)
-		flog (fp, " %1=\"%2\"", encodeString (it.key()), encodeString (it.value()));
+	for (auto it = node->attributes().begin(); it != node->attributes().end(); ++it)
+		fprint (fp, " %1=\"%2\"", encodeString (it.key()), encodeString (it.value()));
 
-	if (node->isEmpty() && g_SaveStack > 0)
-	{	flog (fp, " />\n");
+	if (node->isEmpty() && g_saveStack > 0)
+	{
+		fprint (fp, " />\n");
 		return;
 	}
 
-	flog (fp, ">");
+	fprint (fp, ">");
 
-	if (node->getSubnodes().size() > 0)
-	{	// Write nodes
-		flog (fp, "\n");
+	if (node->subNodes().size() > 0)
+	{
+		// Write nodes
+		fprint (fp, "\n");
 
-		for (const XMLNode* subnode : node->getSubnodes())
-		{	g_SaveStack++;
+		for (const XMLNode * subnode : node->subNodes())
+		{
+			g_saveStack++;
 			writeNode (fp, subnode);
-			g_SaveStack--;
+			g_saveStack--;
 		}
 
-		flog (fp, indent);
+		fprint (fp, indent);
 	}
 	else
-	{	// Write content
-		if (node->getIsCData())
-			flog (fp, "<![CDATA[%1]]>", node->getContents());
+	{
+		// Write content
+		if (node->isCData())
+			fprint (fp, "<![CDATA[%1]]>", node->contents());
 		else
-			flog (fp, encodeString (node->getContents()));
+			fprint (fp, encodeString (node->contents()));
 	}
 
-	flog (fp, "</%1>\n", node->getName());
+	fprint (fp, "</%1>\n", node->name());
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 QString XMLDocument::encodeString (QString in)
-{	QString out (in);
+{
+	QString out (in);
 
 	for (auto i : g_encodingConversions)
 		out.replace (i.decoded, i.encoded);
@@ -246,9 +277,10 @@ QString XMLDocument::encodeString (QString in)
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 QString XMLDocument::decodeString (QString in)
-{	QString out (in);
+{
+	QString out (in);
 
 	for (auto i : g_encodingConversions)
 		out.replace (i.encoded, i.decoded);
@@ -257,22 +289,26 @@ QString XMLDocument::decodeString (QString in)
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 XMLNode* XMLDocument::findNodeByName (QString name) const
-{	return getRoot()->findSubNode (name, true);
+{
+	return root()->findSubNode (name, true);
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 XMLNode* XMLDocument::navigateTo (const QStringList& path, bool allowMake) const
-{	XMLNode* node = getRoot();
+{
+	XMLNode* node = root();
 
 	for (QString name : path)
-	{	XMLNode* parent = node;
+	{
+		XMLNode* parent = node;
 		node = parent->findSubNode (name);
 
 		if (!node)
-		{	if (allowMake)
+		{
+			if (allowMake)
 				node = new XMLNode (name, parent);
 			else
 				return null;
@@ -283,7 +319,8 @@ XMLNode* XMLDocument::navigateTo (const QStringList& path, bool allowMake) const
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 QString XMLDocument::getParseError()
-{	return g_XMLError;
+{
+	return g_errorString;
 }

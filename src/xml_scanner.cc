@@ -2,71 +2,76 @@
 #include "xml_document.h"
 
 static const char* g_XMLTokens[] =
-{	"<?xml",			// HeaderStart
+{
+	"<?xml",			// HeaderStart
 	"?>",				// HeaderEnd
 	"</",				// TagCloser
 	"/>",				// TagSelfCloser
 	"<",				// TagStart
 	">",				// TagEnd
-	// -------------------
+	// ----------------------------------
 	"CData",			// ECData,
-	"Equals sign",	// EEquals,
-	"a symbol",		// ESymbol
-	"a string",		// EString
+	"Equals sign",		// EEquals,
+	"a symbol",			// ESymbol
+	"a string",			// EString
 };
 
-// amount of tokens which are processed from tokens above
-static const int g_numXMLProcessedTokens = 6;
-
-static const char* g_CDataStart   = "<![CDATA[";
-static const char* g_CDataEnd     = "]]>";
-static const char* g_CommentStart = "<!--";
-static const char* g_CommentEnd   = "-->";
+// Amount of tokens which are processed from tokens above
+static const int	gNumNamedTokens = 6;
+static const char*	gCDataStart   = "<![CDATA[";
+static const char*	gCDataEnd     = "]]>";
+static const char*	gCommentStart = "<!--";
+static const char*	gCommentEnd   = "-->";
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 XMLScanner::XMLScanner (const char* data) :
-	m_Data (data),
-	m_Position (&m_Data[0]),
-	m_IsInsideTag (false),
-	m_Line (0) {}
+	m_data (data),
+	m_position (&m_data[0]),
+	m_isInsideTag (false),
+	m_lineNumber (0) {}
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 bool XMLScanner::checkString (const char* c, bool peek)
-{	const bool r = strncmp (getPosition(), c, strlen (c)) == 0;
+{
+	const bool r = strncmp (position(), c, strlen (c)) == 0;
 
 	if (r && !peek)
-		setPosition (getPosition() + strlen (c));
+		setPosition (position() + strlen (c));
 
 	return r;
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 bool XMLScanner::scanNextToken()
-{	setToken ("");
+{
+	setToken ("");
 
-	while (isspace (*getPosition()))
-	{	if (*getPosition() == '\n')
-		setLine (getLine() + 1);
+	while (isspace (*position()))
+	{
+		if (*position() == '\n')
+			setLineNumber (lineNumber() + 1);
 
-		m_Position++;
+		increasePosition();
 	}
 
-	if (*getPosition() == '\0')
+	if (*position() == '\0')
 		return false;
 
 	// Skip any comments
-	while (checkString (g_CommentStart))
-		while (!checkString (g_CommentEnd))
-			m_Position++;
+	while (checkString (gCommentStart))
+		while (!checkString (gCommentEnd))
+			increasePosition();
 
 	// Check and parse CDATA
-	if (checkString (g_CDataStart))
-	{	while (!checkString (g_CDataEnd))
-		{	setToken (getToken() + *getPosition());
-			m_Position++;
+	if (checkString (gCDataStart))
+	{
+		while (!checkString (gCDataEnd))
+		{
+			setToken (token() + *position());
+			increasePosition();
 		}
 
 		setTokenType (ECData);
@@ -74,59 +79,67 @@ bool XMLScanner::scanNextToken()
 	}
 
 	// Check "<", ">", "/>", ...
-	for (int i = 0; i < g_numXMLProcessedTokens; ++i)
-	{	if (checkString (g_XMLTokens[i]))
-		{	setToken (g_XMLTokens[i]);
+	for (int i = 0; i < gNumNamedTokens; ++i)
+	{
+		if (checkString (g_XMLTokens[i]))
+		{
+			setToken (g_XMLTokens[i]);
 			setTokenType ((EToken) i);
 
 			// We need to keep track of when we're inside node tags so we can
 			// stop on '=' signs for attributes when inside tags where '=' has
 			// special meaning but not outside tags where it's just a glyph.
 			if (i == ETagStart || i == EHeaderStart)
-				setIsInsideTag (true);
+				setInsideTag (true);
 			elif (i == ETagEnd || ETagSelfCloser || i == EHeaderEnd)
-				setIsInsideTag (false);
+				setInsideTag (false);
 
 			return true;
 		}
 	}
 
 	// Check and parse string
-	if (*getPosition() == '\"')
-	{	m_Position++;
+	if (*position() == '\"')
+	{
+		increasePosition();
 
-		while (*getPosition() != '\"')
-		{	if (!*getPosition())
+		while (*position() != '\"')
+		{
+			if (!*position())
 				return false;
 
 			if (checkString ("\\\""))
-			{	setToken (getToken() + "\"");
+			{
+				setToken (token() + "\"");
 				continue;
 			}
 
-			setToken (getToken() + *getPosition());
-			m_Position++;
+			setToken (token() + *position());
+			increasePosition();
 		}
 
 		setTokenType (EString);
-		m_Position++; // skip the final quote
+		increasePosition(); // skip the final quote
 		return true;
 	}
 
 	setTokenType (ESymbol);
 
-	while (*getPosition() != '\0')
-	{	if (getIsInsideTag() && isspace (*getPosition()))
+	while (*position() != '\0')
+	{
+		if (isInsideTag() && isspace (*position()))
 			break;
 
 		// Stop at '=' if inside tag
-		if (getIsInsideTag() && *getPosition() == '=')
-		{	if (getToken().length() > 0)
+		if (isInsideTag() && *position() == '=')
+		{
+			if (token().length() > 0)
 				break;
 			else
-			{	setTokenType (EEquals);
+			{
+				setTokenType (EEquals);
 				setToken ("=");
-				m_Position++;
+				increasePosition();
 				return true;
 			}
 		}
@@ -134,8 +147,10 @@ bool XMLScanner::scanNextToken()
 		bool stopHere = false;
 
 		for (int i = 0; i < (signed) (sizeof g_XMLTokens / sizeof * g_XMLTokens); ++i)
-		{	if (checkString (g_XMLTokens[i], true))
-			{	stopHere = true;
+		{
+			if (checkString (g_XMLTokens[i], true))
+			{
+				stopHere = true;
 				break;
 			}
 		}
@@ -143,23 +158,25 @@ bool XMLScanner::scanNextToken()
 		if (stopHere)
 			break;
 
-		setToken (getToken() + *getPosition());
-		m_Position++;
+		setToken (token() + *position());
+		increasePosition();
 	}
 
 	return true;
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 bool XMLScanner::scanNextToken (EToken tok)
-{	const char* oldPosition = getPosition();
+{
+	const char* oldPosition = position();
 
 	if (!scanNextToken())
 		return false;
 
-	if (getTokenType() != tok)
-	{	setPosition (oldPosition);
+	if (tokenType() != tok)
+	{
+		setPosition (oldPosition);
 		return false;
 	}
 
@@ -167,8 +184,9 @@ bool XMLScanner::scanNextToken (EToken tok)
 }
 
 // =============================================================================
-// -----------------------------------------------------------------------------
+//
 void XMLScanner::mustScanNext (XMLScanner::EToken tok)
-{	if (!scanNextToken (tok))
-		throw XMLError (fmt ("Expected '%1', got '%2' instead", g_XMLTokens[tok], getToken()));
+{
+	if (!scanNextToken (tok))
+		throw format ("Expected '%1', got '%2' instead", g_XMLTokens[tok], token());
 }

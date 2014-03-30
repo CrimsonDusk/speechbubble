@@ -2,88 +2,125 @@
 #include "user.h"
 #include "connection.h"
 #include "context.h"
-#include "moc_channel.cpp"
 
-IRCChannel::IRCChannel (IRCConnection* conn, QString name) :
-	m_Name (name),
-	m_JoinTime (QTime::currentTime()),
-	m_Connection (conn)
-{	setContext (new Context (this));
-	m_Connection->addChannel (this);
+// ============================================================================
+//
+IRCChannel::IRCChannel (IRCConnection* conn, const QString& newname) :
+	m_name (newname),
+	m_joinTime (QTime::currentTime()),
+	m_connection (conn),
+	m_namesDone (true)
+{
+	setContext (new Context (this));
+	m_connection->addChannel (this);
+	m_connection->write (format ("WHO %1", name()));
 }
 
+// ============================================================================
+//
 IRCChannel::~IRCChannel()
-{	delete getContext();
+{
+	delete context();
 
-	for (const IRCChannel::Entry& e : getUserlist())
-	{	IRCUser* user = e.getUserInfo();
+	for (const UserlistEntry & e : userlist())
+	{
+		IRCUser* user = e.userInfo();
 		user->dropKnownChannel (this);
 	}
 }
 
-IRCChannel::Entry* IRCChannel::addUser (IRCUser* info)
-{	Entry e (info, FNormal);
+// ============================================================================
+//
+UserlistEntry* IRCChannel::addUser (IRCUser* info)
+{
+	UserlistEntry e (info, FNormal);
 	info->addKnownChannel (this);
-	m_Userlist << e;
+	m_userlist << e;
 	emit userlistChanged();
-	return &(m_Userlist.last());
+	return &m_userlist.last();
 }
 
+// ============================================================================
+//
 void IRCChannel::removeUser (IRCUser* info)
-{	info->dropKnownChannel (this);
+{
+	info->dropKnownChannel (this);
 
-	for (const Entry& e : getUserlist())
-	{	if (e.getUserInfo() == info)
-		{	m_Userlist.removeOne (e);
+	for (const UserlistEntry& e : userlist())
+	{
+		if (e.userInfo() == info)
+		{
+			m_userlist.removeOne (e);
 			emit userlistChanged();
 			return;
 		}
 	}
 }
 
-IRCChannel::Entry* IRCChannel::findUserByName (QString name)
-{	for (Entry& e : m_Userlist)
-	{	if (e.getUserInfo()->getNickname() == name)
+// ============================================================================
+//
+UserlistEntry* IRCChannel::findUserByName (QString name)
+{
+	for (UserlistEntry & e : m_userlist)
+	{
+		if (e.userInfo()->nickname() == name)
 			return &e;
 	}
 
 	return null;
 }
 
-IRCChannel::Entry* IRCChannel::findUser (IRCUser* info)
-{	for (Entry& e : m_Userlist)
-	{	if (e.getUserInfo() == info)
+// ============================================================================
+//
+UserlistEntry* IRCChannel::findUser (IRCUser* info)
+{
+	for (UserlistEntry & e : m_userlist)
+	{
+		if (e.userInfo() == info)
 			return &e;
 	}
 
 	return null;
 }
 
-bool IRCChannel::Entry::operator== (const IRCChannel::Entry& other) const
-{	return (getUserInfo() == other.getUserInfo()) && (getStatus() == other.getStatus());
+// ============================================================================
+//
+bool UserlistEntry::operator== (const UserlistEntry& other) const
+{
+	return (userInfo() == other.userInfo()) &&
+		   (status() == other.status());
 }
 
-IRCChannel::FStatusFlags IRCChannel::getStatusOf (IRCUser* info)
-{	Entry* e = findUser (info);
+// ============================================================================
+//
+FStatusFlags IRCChannel::getStatusOf (IRCUser* info)
+{
+	UserlistEntry* e = findUser (info);
 
 	if (!e)
 		return FNormal;
 
-	return e->getStatus();
+	return e->status();
 }
 
-IRCChannel::EStatus IRCChannel::getEffectiveStatusOf (IRCUser* info)
-{	Entry* e = findUser (info);
+// ============================================================================
+//
+EStatus IRCChannel::getEffectiveStatusOf (IRCUser* info)
+{
+	UserlistEntry* e = findUser (info);
 
 	if (!e)
 		return FNormal;
 
-	FStatusFlags mode = e->getStatus();
+	FStatusFlags mode = e->status();
 	return effectiveStatus (mode);
 }
 
-IRCChannel::EStatus IRCChannel::effectiveStatus (IRCChannel::FStatusFlags mode)
-{	if (mode & FOwner)  return FOwner;
+// ============================================================================
+//
+EStatus IRCChannel::effectiveStatus (FStatusFlags mode)
+{
+	if (mode & FOwner)  return FOwner;
 	if (mode & FAdmin)  return FAdmin;
 	if (mode & FOp)     return FOp;
 	if (mode & FHalfOp) return FHalfOp;
@@ -92,206 +129,188 @@ IRCChannel::EStatus IRCChannel::effectiveStatus (IRCChannel::FStatusFlags mode)
 	return FNormal;
 }
 
-QString IRCChannel::getStatusName (IRCChannel::FStatusFlags mode)
-{	switch (effectiveStatus (mode))
-	{	case FOwner:
-			return "Owner";
-
-		case FAdmin:
-			return "Admin";
-
-		case FOp:
-			return "Operator";
-
-		case FHalfOp:
-			return "Half-operator";
-
-		case FVoiced:
-			return "Voiced";
-
-		case FNormal:
-			return "User";
+// ============================================================================
+//
+// Since the effective status returns a flag instead of a normal enumerator,
+// this cannot be a lookup table.
+//
+QString IRCChannel::getStatusName (FStatusFlags mode)
+{
+	switch (effectiveStatus (mode))
+	{
+		case FOwner:	return tr ("Owner");
+		case FAdmin:	return tr ("Admin");
+		case FOp:		return tr ("Operator");
+		case FHalfOp:	return tr ("Half-operator");
+		case FVoiced:	return tr ("Voiced");
+		case FNormal:	return tr ("User");
 	}
 
 	return "User";
 }
 
-const ChannelModeInfo g_ChannelModeInfo[] =
+// ============================================================================
+//
+FStatusFlags IRCChannel::getStatusFlag (char c)
 {
-#define CHANMODE(C, N, HASARG) \
-	{ C, EChanMode##N, #N, HASARG },
-	CHANMODE ('A', AllInvite,      false)
-	CHANMODE ('b', Ban,            true)
-	CHANMODE ('B', BlockCaps,      false)
-	CHANMODE ('c', BlockColors,    false)
-	CHANMODE ('C', BlockCTCP,      false)
-	CHANMODE ('D', DelayedJoin,    false)
-	CHANMODE ('d', DelayedMessage, true)
-	CHANMODE ('e', BanExempt,      true)
-	CHANMODE ('f', FloodKick,      true)
-	CHANMODE ('F', NickFlood,      false)
-	CHANMODE ('g', WordCensor,     true)
-	CHANMODE ('G', NetworkCensor,  false)
-	CHANMODE ('h', ChanHalfOp,     true)
-	CHANMODE ('H', History,        true)
-	CHANMODE ('i', InviteOnly,     false)
-	CHANMODE ('I', InviteExcept,   true)
-	CHANMODE ('j', JoinFlood,      true)
-	CHANMODE ('J', KickNoRejoin,   true)
-	CHANMODE ('k', Locked,         true)
-	CHANMODE ('K', NoKnock,        false)
-	CHANMODE ('l', UserLimit,      true)
-	CHANMODE ('L', Redirect,       true)
-	CHANMODE ('m', Moderated,      false)
-	CHANMODE ('M', RegisterSpeak,  false)
-	CHANMODE ('n', NoExtMessages,  false)
-	CHANMODE ('N', NoNickChanges,  false)
-	CHANMODE ('o', ChanOp,         true)
-	CHANMODE ('O', OpersOnly,      false)
-	CHANMODE ('p', Private,        false)
-	CHANMODE ('P', Permanent,      false)
-	CHANMODE ('q', ChanOwner,      true)
-	CHANMODE ('Q', NoKick,         false)
-	CHANMODE ('R', RegisterJoin,   false)
-	CHANMODE ('s', Secret,         false)
-	CHANMODE ('S', StripColors,    false)
-	CHANMODE ('t', TopicLock,      false)
-	CHANMODE ('T', BlockNotice,    false)
-	CHANMODE ('u', Auditorium,     false)
-	CHANMODE ('v', UserVoice,      false)
-	CHANMODE ('w', AutoOp,         true)
-	CHANMODE ('y', IRCOpInChannel, false)
-	CHANMODE ('Y', IRCOpOJoin,     false)
-	CHANMODE ('X', GenericRestrict, true)
-	CHANMODE ('z', Secure,         false)
-	CHANMODE ('Z', NamedMode,      true)
-};
-
-IRCChannel::FStatusFlags IRCChannel::getStatusFlag (char c)
-{	switch (c)
-	{	case 'q':
-			return FOwner;
-
-		case 'a':
-			return FAdmin;
-
-		case 'o':
-			return FOp;
-
-		case 'h':
-			return FHalfOp;
-
-		case 'v':
-			return FVoiced;
+	switch (c)
+	{
+		case 'q':	return FOwner;
+		case 'a':	return FAdmin;
+		case 'o':	return FOp;
+		case 'h':	return FHalfOp;
+		case 'v':	return FVoiced;
 	}
 
 	return 0;
 }
 
+// ============================================================================
+//
 void IRCChannel::applyModeString (QString text)
-{	bool neg = false;
-	QStringList args = text.split (" ", QString::SkipEmptyParts);
-	uint argidx = 0;
-	QString modestring = args[0];
-	args.erase (0);
+{
+	if (text.isEmpty())
+		return;
+
+	bool	neg = false;
+	QString	modestring = text.split (" ", QString::SkipEmptyParts) [0];
+	bool	needNames = false;
 
 	for (char c : modestring.toUtf8())
-	{	if (c == '+')
-		{	// +abc
+	{
+		if (c == '+')
+		{
+			// +abc
 			neg = false;
 			continue;
-		} elif (c == '-')
-		{	// -abc
+		}
+
+		if (c == '-')
+		{
+			// -abc
 			neg = true;
 			continue;
 		}
 
 		// Handle status modes. Who on earth thought it was a good
 		// idea to have them as channel modes?
+		// Since we cannot really parse the mode string fully, we
+		// must ask the server for a new NAMES list.
 		if (c == 'o' || c == 'v' || c == 'h' || c == 'a' || c == 'q')
-		{	if (args.isEmpty())
-				continue;
-
-			// All of these require an argument
-			QString arg = args.last();
-			args.removeLast();
-
-			Entry* e = findUserByName (arg);
-
-			if (!e)
-				continue;
-
-			FStatusFlags status = e->getStatus();
-			FStatusFlags flag = getStatusFlag (c);
-
-			if (!neg)
-				status |= flag;
-			else
-				status &= ~flag;
-
-			e->setStatus (status);
-			emit userlistChanged();
+		{
+			needNames = true;
 			continue;
 		}
 
-		for (const ChannelModeInfo& it : g_ChannelModeInfo)
-		{	if (it.c != c)
-				continue;
-
-			if (neg == false)
-			{	// New mode
-				ChannelMode mode;
-				mode.info = &it;
-
-				if (it.hasArg)
-				{	mode.arg = args.last();
-					args.removeLast();
-				}
-
-				m_Modes << mode;
-			}
-			else
-			{	// Remove existing mode
-				for (int j = 0; j < getModes().size(); ++j)
-				{	ChannelMode mode = getModes()[j];
-
-					if (mode.info != &it)
-						continue;
-
-					m_Modes.removeAt (j);
-
-					if (!mode.arg.isEmpty())
-						argidx++;
-				}
-			}
-
-			break;
-		}
+		if (neg == false)
+			m_modes << c;
+		else
+			m_modes.removeOne (c);
 	}
+
+	if (needNames)
+		connection()->write (format("NAMES :%1\n", name()));
 }
 
+// ============================================================================
+//
 QString IRCChannel::getModeString() const
-{	QString modestring;
+{
+	QString modestring;
 	QStringList args;
 
-	for (const ChannelMode& mode : m_Modes)
-	{	modestring += mode.info->c;
-
-		if (mode.info->hasArg)
-			args << mode.arg;
-	}
+	for (char mode : m_modes)
+		modestring += mode;
 
 	args.push_front (modestring);
 	return args.join (" ");
 }
 
-ChannelMode* IRCChannel::getMode (EChanMode modenum)
-{	for (ChannelMode& mode : m_Modes)
-	{	if (mode.info->mode != modenum)
-			continue;
+// ============================================================================
+//
+void IRCChannel::addNames (const QStringList& names)
+{
+	static const struct
+	{
+		char	symbol;
+		EStatus	flag;
+	} statusflags[] =
+	{
+		{ '~',	FOwner	},
+		{ '&',	FAdmin	},
+		{ '@',	FOp		},
+		{ '%',	FHalfOp	},
+		{ '+',	FVoiced	},
+	};
 
-		return &mode;
+	for (QString nick : names)
+	{
+		FStatusFlags	flags = 0;
+		IRCUser*		user = connection()->findUser (nick, true);
+		bool			repeat;
+
+		do
+		{
+			repeat = false;
+
+			for (const auto & flaginfo : statusflags)
+			{
+				if (nick.startsWith (flaginfo.symbol))
+				{
+					nick.remove (0, 1);
+					flags |= flaginfo.flag;
+					repeat = true;
+					break;
+				}
+			}
+		}
+		while (repeat == true);
+
+		m_newNames << UserlistEntry (user, flags);
+	}
+}
+
+// ============================================================================
+//
+void IRCChannel::namesDone()
+{
+	QList<IRCUser*> oldusers;
+
+	// This gets a bit tricky, I don't want any users to be deleted just because
+	// this is their only known channel and they would be auto-pruned in the
+	// process. So we flag them so that they won't be pruned and perform the
+	// pruning manually once we're done.
+	for (UserlistEntry & e : m_userlist)
+	{
+		e.userInfo()->setFlags (e.userInfo()->flags() | IRCUser::FDoNotDelete);
+		oldusers << e.userInfo();
+		e.userInfo()->dropKnownChannel (this);
 	}
 
-	return null;
+	m_userlist = m_newNames;
+
+	// Now check which users in oldusers are still in the userlist.
+	for (auto it = oldusers.begin(); it != oldusers.end(); ++it)
+	{
+		IRCUser* user = *it;
+
+		for (UserlistEntry & e : m_userlist)
+		{
+			if (e.userInfo() == user)
+			{
+				it = oldusers.erase (it) - 1;
+				break;
+			}
+		}
+	}
+
+	// Now remove the do not delete flag and perform pruning.
+	for (IRCUser * user : oldusers)
+	{
+		user->setFlags (user->flags() & ~IRCUser::FDoNotDelete);
+		user->checkForPruning();
+	}
+
+	m_newNames.clear();
+	emit userlistChanged();
 }
