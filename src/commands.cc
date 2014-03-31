@@ -122,6 +122,21 @@ DEFINE_COMMAND (me)
 
 // ============================================================================
 //
+DEFINE_COMMAND (ctcp)
+{
+	IRCConnection* conn = Context::currentContext()->connection();
+
+	if (conn == null)
+		error ("cannot use /ctcp here");
+
+	CHECK_PARMS (2, -1, "<username> <ctcp message>")
+	args[1] = args[1].toUpper();
+	writeRaw (format ("PRIVMSG %1 :\001%2\001\n", args[0], subset (args, 1, -1)));
+	Context::currentContext()->print (format ("\\c2[CTCP] %1 => %2", args[1], args[0]));
+}
+
+// ============================================================================
+//
 // Command aliases
 //
 ALIAS_COMMAND (j,	join)
@@ -140,6 +155,7 @@ const CommandInfo g_Commands[] =
 	DECLARE_COMMAND (quote)
 	DECLARE_COMMAND (raw)
 	DECLARE_COMMAND (me)
+	DECLARE_COMMAND (ctcp)
 };
 
 // ============================================================================

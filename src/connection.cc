@@ -312,9 +312,30 @@ void IRCConnection::processPrivmsg (QString msg, QStringList tokens)
 	if (Q_LIKELY (message.startsWith (":")))
 		message.remove (0, 1);
 
-	// If the target field is our name, then this is a PM coming to us.
-	if (tokens[2] == ourselves()->nickname())
+	if (tokens[2][0] == '#')
 	{
+		IRCChannel* chan = findChannel (tokens[2], false);
+
+		if (chan != null)
+			ctx = chan->context();
+	}
+	elif (message.startsWith ("\001") &&
+		message.startsWith ("\001ACTION", Qt::CaseInsensitive) == false)
+	{
+		::print ("recognized as non-action CTCP\n");
+
+		// This is a CTCP message, we can use laxer rules on the context;
+		// use the server context if we aren't using a subcontext, unless this
+		// is a channel CTCP in which case we need to use the channel context
+		// rules (in which case the block above will have caught it) and unless
+		// this is /me in which case it should be treated like a normal chat
+		// message as far as the context goes.
+		if ((ctx = Context::currentContext())->connection() != this)
+			ctx = context();
+	}
+	elif (tokens[2] == ourselves()->nickname())
+	{
+		// If the target field is our name, then this is a PM coming to us.
 		// Ensure we have a data field for this person now
 		if (user == null)
 			user = findUser (usernick, true);
@@ -324,31 +345,56 @@ void IRCConnection::processPrivmsg (QString msg, QStringList tokens)
 			user->setContext (new Context (user));
 
 		ctx = user->context();
+		::print ("context is user %1's context %2\n", user->nickname(), ctx);
 	}
 	else
 	{
-		IRCChannel* chan = findChannel (tokens[2], false);
-
-		if (!chan)
-		{
-			warning (format (tr ("Recieved strange PRIVMSG from %1 to \"%2\": %3"),
-				usernick, tokens[2], msg));
-			return;
-		}
-
-		ctx = chan->context();
+		warning (format (tr ("Recieved strange PRIVMSG from %1 to \"%2\": %3"),
+			usernick, tokens[2], msg));
+		return;
 	}
 
-	// Handle /me here
-	if (message.startsWith ("\001ACTION "))
+	// Handle CTCP here
+	if (message.startsWith ("\001"))
 	{
-		message.remove (0, strlen ("\001ACTION "));
+		message.remove (0, 1);
 
-		// /me is CTCP and should end with \001 but that's not always the case.
+		// CTCP commands should end with \001 but that's not always the case
 		if (message.endsWith ("\001"))
 			message.chop (1);
 
-		ctx->writeIRCAction (usernick, message);
+		QStringList ctcptokens = message.split (" ");
+
+		if (ctcptokens.isEmpty() == false)
+		{
+			QString ctcpcmd = ctcptokens.first().toLower();
+
+			if (ctcpcmd == "version")
+			{
+				write (format ("NOTICE %1 :\001VERSION " APPNAME " %2\001\n",
+					usernick, getVersionString()));
+			}
+			elif (ctcpcmd == "time")
+			{
+				write (format ("NOTICE %1 :\001TIME %2\001\n",
+					usernick, QDateTime::currentDateTime().toString (Qt::TextDate)));
+			}
+			elif (ctcpcmd == "ping")
+			{
+				write (format ("NOTICE %1 :\001PING %2\001\n",
+					usernick, message.mid (strlen ("PING "))));
+			}
+			elif (ctcpcmd == "action")
+			{
+				// ACTION aka /me
+				message.remove (0, strlen ("ACTION "));
+				ctx->writeIRCAction (usernick, message);
+			}
+
+			if (ctcpcmd != "action")
+				ctx->print (format ("\\c1Recieved CTCP request from %1: %2",
+					usernick, message));
+		}
 		return;
 	}
 
