@@ -13,6 +13,7 @@
 #include <QMap>
 #include "macros.h"
 #include "format.h"
+#include "metadata.h"
 
 // Even though we have our own assert in this file, we still need to include <cassert>.
 // This is to ensure that no Qt headers, some of which do include <cassert>, wind up
@@ -21,6 +22,7 @@
 
 static const std::nullptr_t null = nullptr;
 extern const char* configname;
+using StringMap = QMap<QString, QString>;
 
 #ifdef IN_IDE_PARSER
 # error IN_IDE_PARSER defined - this is for KDevelop workarounds

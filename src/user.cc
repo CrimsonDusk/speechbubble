@@ -6,10 +6,10 @@
 //
 IRCUser::~IRCUser()
 {
-	m_flags |= FDoNotDelete;
-	connection()->forgetUser (this);
+	flags |= FDoNotDelete;
+	connection->forgetUser (this);
 
-	for (IRCChannel * chan : channels())
+	for (IRCChannel* chan : channels)
 		chan->removeUser (this);
 }
 
@@ -24,30 +24,30 @@ EStatus IRCUser::getStatusInChannel (IRCChannel* chan)
 
 // =============================================================================
 //
-QString IRCUser::userHost() const
+QString IRCUser::getUserHost() const
 {
-	return format ("%1!%2@%3", nickname(), username(), hostname());
+	return format ("%1!%2@%3", nickname, username, hostname);
 }
 
 // =============================================================================
 //
 QString IRCUser::describe() const
 {
-	return format ("%1 (%2)", userHost(), realname());
+	return format ("%1 (%2)", getUserHost(), realname);
 }
 
 // =============================================================================
 //
 void IRCUser::addKnownChannel (IRCChannel* chan)
 {
-	m_channels << chan;
+	channels << chan;
 }
 
 // =============================================================================
 //
 void IRCUser::dropKnownChannel (IRCChannel* chan)
 {
-	m_channels.removeOne (chan);
+	channels.removeOne (chan);
 	checkForPruning();
 }
 
@@ -57,10 +57,10 @@ void IRCUser::dropKnownChannel (IRCChannel* chan)
 //
 void IRCUser::checkForPruning()
 {
-	if ((this != connection()->ourselves()) &&
-		(channels().isEmpty()) &&
-		(context() == null) &&
-		(flags() & FDoNotDelete) == 0)
+	if ((this != connection->ourselves) &&
+		(channels.isEmpty()) &&
+		(context == null) &&
+		(flags & FDoNotDelete) == 0)
 	{
 		delete this;
 	}

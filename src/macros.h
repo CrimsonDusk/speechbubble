@@ -32,27 +32,7 @@
 		NAME (const NAME&) = delete; \
 		void operator= (const NAME&) = delete;
 
-#define PROPERTY(ACCESS, TYPE, READ, WRITE, WRITETYPE)			\
-private:														\
-	TYPE m_##READ;												\
-																\
-public:															\
-	inline TYPE const& READ() const								\
-	{															\
-		return m_##READ; 										\
-	}															\
-																\
-ACCESS:															\
-	void WRITE (TYPE const& a) PROPERTY_##WRITETYPE (READ)		\
-
-#define PROPERTY_STOCK_WRITE(READ)								\
-	{															\
-		m_##READ = a;											\
-	}
-
-#define PROPERTY_CUSTOM_WRITE(READ)								\
-	;
-
 #define elif(A) else if (A)
+#define UTF16(A) (QString::fromUtf16 (reinterpret_cast<const ushort*> (A)))
 
 #endif // COIRC_MACROS_H

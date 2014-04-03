@@ -1,14 +1,8 @@
 project (ldforge)
 add_subdirectory (updaterevision)
+add_subdirectory (metacollector)
 cmake_minimum_required (VERSION 2.6)
 find_package (Qt4 REQUIRED)
-
-get_target_property (UPDATEREVISION_EXE updaterevision LOCATION)
-
-add_custom_target (revision_check ALL
-    COMMAND ${UPDATEREVISION_EXE} src/gitinfo.h
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    DEPENDS updaterevision)
 
 include_directories (${QT_INCLUDES} ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -55,6 +49,19 @@ set (SPEECHBUBBLE_FORMS
 	ui/main.ui
 )
 
+get_target_property (UPDATEREVISION_EXE updaterevision LOCATION)
+get_target_property (METACOLLECTOR_EXE metacollector LOCATION)
+
+add_custom_target (revision_check ALL
+    COMMAND ${UPDATEREVISION_EXE} gitinfo.h
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    DEPENDS updaterevision)
+
+add_custom_target (metacollection ALL
+    COMMAND ${METACOLLECTOR_EXE} ${SPEECHBUBBLE_HEADERS} ${CMAKE_BINARY_DIR}/metadata.h ${CMAKE_BINARY_DIR}/metadata.cc
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    DEPENDS metacollector)
+
 if (CMAKE_COMPILER_IS_GNUCXX)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Werror=switch -Werror=uninitialized -Werror=address -Werror=return-type -Werror=maybe-uninitialized -Werror=format -Werror=double-promotion -std=c++11")
 endif()
@@ -82,5 +89,8 @@ target_link_libraries (speechbubble
 	${QT_QTGUI_LIBRARY}
 	${QT_QTNETWORK_LIBRARY}
 )
+
+add_dependencies (speechbubble revision_check)
+add_dependencies (speechbubble metacollection)
 
 install (TARGETS speechbubble RUNTIME DESTINATION bin)

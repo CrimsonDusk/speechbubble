@@ -8,14 +8,13 @@
 class XMLNode
 {
 public:
-	using AttributeMap = QMap<QString, QString>;
-
-	PROPERTY (public,    QString,			contents,	setContents,	STOCK_WRITE);
-	PROPERTY (public,    QString,			name,		setName,		STOCK_WRITE)
-	PROPERTY (protected, QList<XMLNode*>,	subNodes,	setSubNodes,	STOCK_WRITE);
-	PROPERTY (protected, AttributeMap,		attributes,	setAttributes,	STOCK_WRITE);
-	PROPERTY (protected, bool,				isCData,	setCData,		STOCK_WRITE);
-	PROPERTY (protected, XMLNode*,			parent,		setParent,		STOCK_WRITE);
+	PROPERTY (QString contents)
+	PROPERTY (QString name)
+	PROPERTY (QList<XMLNode*> subNodes)
+	PROPERTY (StringMap attributes)
+	PROPERTY (bool isCData)
+	PROPERTY (XMLNode* parent)
+	CLASSDATA (XMLNode)
 
 public:
 	XMLNode (QString name, XMLNode* parent);
@@ -31,9 +30,6 @@ public:
 	bool					hasAttribute (QString name) const;
 	bool					isEmpty() const;
 	void					setAttribute (QString name, QString data);
-
-protected:
-	friend class XMLDocument;
 };
 
 #endif // XML_NODE_H

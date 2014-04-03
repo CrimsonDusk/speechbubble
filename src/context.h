@@ -32,14 +32,15 @@ public:
 		IRCUser* user;
 	};
 
-	PROPERTY (public,  QTreeWidgetItem*,	treeItem,		setTreeItem,	STOCK_WRITE)
-	PROPERTY (public,  QTextDocument*,		document,		setDocument,	STOCK_WRITE)
-	PROPERTY (private, QList<Context*>,		subContexts,	setSubContexts,	STOCK_WRITE)
-	PROPERTY (private, Context*,			parent,			setParent,		STOCK_WRITE)
-	PROPERTY (private, TargetUnion,			target,			setTarget,		STOCK_WRITE)
-	PROPERTY (private, ContextType,			type,			setType,		STOCK_WRITE)
-	PROPERTY (private, int,					id,				setID,			STOCK_WRITE)
-	PROPERTY (private, QString,				html,			setHTML,		STOCK_WRITE)
+	PROPERTY (QTreeWidgetItem* treeItem)
+	PROPERTY (QTextDocument* document)
+	PROPERTY (QList<Context*> subContexts)
+	PROPERTY (Context* parentContext)
+	PROPERTY (TargetUnion target)
+	PROPERTY (ContextType type)
+	PROPERTY (int id)
+	PROPERTY (QString html)
+	CLASSDATA (Context)
 
 public:
 	Context (IRCConnection* conn);
@@ -49,8 +50,8 @@ public:
 
 	void							addSubContext (Context* child);
 	void							forgetSubContext (Context* child);
-	IRCConnection*					connection();
-	QString							name() const;
+	IRCConnection*					getConnection();
+	QString							getName() const;
 	void							print (QString text);
 	void							updateTreeItem();
 	void							writeIRCMessage (QString from, QString msg);
@@ -76,7 +77,7 @@ private:
 //
 static inline IRCConnection* getCurrentConnection()
 {
-	return Context::currentContext()->connection();
+	return Context::currentContext()->getConnection();
 }
 
 #endif // SPEECHBUBBLE_CONTEXT_H

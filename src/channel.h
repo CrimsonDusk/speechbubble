@@ -27,13 +27,14 @@ Q_DECLARE_OPERATORS_FOR_FLAGS (FStatusFlags)
 //
 class UserlistEntry
 {
-	PROPERTY (public, IRCUser*,			userInfo,	setUserInfo,	STOCK_WRITE)
-	PROPERTY (public, FStatusFlags,		status,		setStatus,		STOCK_WRITE)
+	PROPERTY (IRCUser* userInfo)
+	PROPERTY (FStatusFlags status)
+	CLASSDATA (UserlistEntry)
 
 public:
 	UserlistEntry (IRCUser* user, FStatusFlags stat) :
-		m_userInfo (user),
-		m_status (stat) {}
+		userInfo (user),
+		status (stat) {}
 
 	bool operator== (const UserlistEntry& other) const;
 };
@@ -43,13 +44,16 @@ public:
 class IRCChannel : public QObject
 {
 	Q_OBJECT
-	PROPERTY (public,  QString,					name,		setName,		STOCK_WRITE)
-	PROPERTY (public,  QString,					topic,		setTopic,		STOCK_WRITE)
-	PROPERTY (public,  QTime,					joinTime,	setJoinTime,	STOCK_WRITE)
-	PROPERTY (public,  Context*,				context,	setContext,		STOCK_WRITE)
-	PROPERTY (private, IRCConnection*,			connection,	setConnection,	STOCK_WRITE)
-	PROPERTY (private, QList<UserlistEntry>,	userlist,	setUserlist,	STOCK_WRITE)
-	PROPERTY (private, QList<char>,				modes,		setModes,		STOCK_WRITE)
+	PROPERTY (QString name)
+	PROPERTY (QString topic)
+	PROPERTY (QTime joinTime)
+	PROPERTY (Context* context)
+	PROPERTY (IRCConnection* connection)
+	PROPERTY (QList<UserlistEntry> userlist)
+	PROPERTY (QList<char> modes)
+	PROPERTY (QList<UserlistEntry> newNames)
+	PROPERTY (bool isDoneWithNames);
+	CLASSDATA (IRCChannel)
 
 public:
 	IRCChannel (IRCConnection* conn, const QString& newname);
@@ -72,10 +76,6 @@ public:
 
 signals:
 	void userlistChanged();
-
-private:
-	QList<UserlistEntry>	m_newNames;
-	bool					m_namesDone;
 };
 
 #endif // SPEECHBUBBLE_CHANNEL_H

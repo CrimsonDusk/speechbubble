@@ -28,10 +28,10 @@ static const QString gColorCodes[] =
 };
 
 static const int						gNumColorCodes = COUNT_OF (gColorCodes);
-static QMap<QTreeWidgetItem*, Context*>	gContextsByTreeItem;
-static Context*							gCurrentContext = null;
-static QList<Context*>					gAllContexts;
-static QMap<int, Context*>				gContextsByID;
+static QMap<QTreeWidgetItem*, Context*>	g_contextsByTreeItem;
+static Context*							g_currentContext = null;
+static QList<Context*>					g_allContexts;
+static QMap<int, Context*>				g_contextsByID;
 
 // =============================================================================
 //
@@ -204,12 +204,12 @@ static QString convertToHTML (QString in, FConversionFlags flags)
 //
 Context::Context (IRCConnection* conn) :
 	QObject(),
-	m_type (CTX_Server)
+	type (CTX_Server)
 {
 	TargetUnion u;
 	u.conn = conn;
-	setTarget (u);
-	setParent (null);
+	target = u;
+	parentContext = null;
 	commonInit();
 	win->addContext (this);
 }
@@ -218,12 +218,12 @@ Context::Context (IRCConnection* conn) :
 //
 Context::Context (IRCChannel* channel) :
 	QObject(),
-	m_type (CTX_Channel)
+	type (CTX_Channel)
 {
 	TargetUnion u;
 	u.chan = channel;
-	setTarget (u);
-	setParent (channel->connection()->context());
+	target = u;
+	parentContext = channel->connection->context;
 	commonInit();
 
 	IRCChannel::connect (channel, SIGNAL (userlistChanged()), win, SLOT (updateUserlist()));
@@ -233,12 +233,12 @@ Context::Context (IRCChannel* channel) :
 //
 Context::Context (IRCUser* user) :
 	QObject(),
-	m_type (CTX_Query)
+	type (CTX_Query)
 {
 	TargetUnion u;
 	u.user = user;
-	setTarget (u);
-	setParent (user->connection()->context());
+	target = u;
+	parentContext = user->connection->context;
 	commonInit();
 }
 
@@ -246,48 +246,48 @@ Context::Context (IRCUser* user) :
 //
 void Context::commonInit()
 {
-	setID (1);
+	id = 1;
 
-	while (gContextsByID.find (id()) != gContextsByID.end())
-		setID (id() + 1);
+	while (g_contextsByID.find (id) != g_contextsByID.end())
+		id++;
 
-	setTreeItem (new QTreeWidgetItem);
-	setDocument (new QTextDocument);
+	treeItem = new QTreeWidgetItem;
+	document = new QTextDocument;
 
-	if (parent() != null)
-		parent()->addSubContext (this);
+	if (parentContext != null)
+		parentContext->addSubContext (this);
 
-	gAllContexts << this;
-	gContextsByID[id()] = this;
-	gContextsByTreeItem[treeItem()] = this;
+	g_allContexts << this;
+	g_contextsByID[id] = this;
+	g_contextsByTreeItem[treeItem] = this;
 }
 
 // =============================================================================
 //
 Context::~Context()
 {
-	if (parent())
-		parent()->forgetSubContext (this);
+	if (parentContext)
+		parentContext->forgetSubContext (this);
 
-	gAllContexts.removeOne (this);
-	gContextsByID.remove (id());
-	delete treeItem();
+	g_allContexts.removeOne (this);
+	g_contextsByID.remove (id);
+	delete treeItem;
 }
 
 // =============================================================================
 //
 const QList<Context*>& Context::allContexts() // [static]
 {
-	return gAllContexts;
+	return g_allContexts;
 }
 
 // =============================================================================
 //
 void Context::updateTreeItem()
 {
-	treeItem()->setText (0, name());
+	treeItem->setText (0, getName());
 
-	for (Context * sub : subContexts())
+	for (Context* sub : subContexts)
 		sub->updateTreeItem();
 }
 
@@ -295,9 +295,9 @@ void Context::updateTreeItem()
 //
 void Context::addSubContext (Context* child)
 {
-	m_subContexts << child;
-	child->setParent (this);
-	treeItem()->addChild (child->treeItem());
+	subContexts << child;
+	child->parentContext = this;
+	treeItem->addChild (child->treeItem);
 	updateTreeItem();
 }
 
@@ -305,58 +305,58 @@ void Context::addSubContext (Context* child)
 //
 void Context::forgetSubContext (Context* child)
 {
-	m_subContexts.removeOne (child);
-	child->setParent (null);
+	subContexts.removeOne (child);
+	child->parentContext = null;
 }
 
 // =============================================================================
 //
 Context* Context::fromTreeWidgetItem (QTreeWidgetItem* item) // [static]
 {
-	return gContextsByTreeItem[item];
+	return g_contextsByTreeItem[item];
 }
 
 // =============================================================================
 //
 Context* Context::currentContext() // [static]
 {
-	return gCurrentContext;
+	return g_currentContext;
 }
 
 // =============================================================================
 //
 void Context::setCurrentContext (Context* context) // [static]
 {
-	gCurrentContext = context;
+	g_currentContext = context;
 	win->updateOutputWidget();
 }
 
 // =============================================================================
 //
-QString Context::name() const
+QString Context::getName() const
 {
-	switch (type())
+	switch (type)
 	{
-	case CTX_Channel:
-	{
-		return target().chan->name();
-		break;
+		case CTX_Channel:
+		{
+			return target.chan->name;
+			break;
+		}
+
+		case CTX_Query:
+		{
+			return target.user->nickname;
+			break;
+		}
+
+		case CTX_Server:
+		{
+			return target.conn->hostname;
+			break;
+		}
 	}
 
-	case CTX_Query:
-	{
-		return target().user->nickname();
-		break;
-	}
-
-	case CTX_Server:
-	{
-		return target().conn->hostname();
-		break;
-	}
-	}
-
-	return QString();
+	return "";
 }
 
 // =============================================================================
@@ -368,8 +368,8 @@ void Context::rawPrint (QString msg, bool replaceEscapeCodes)
 	if (replaceEscapeCodes)
 		flags |= FReplaceEscapeCodes;
 
-	setHTML (html() + convertToHTML (msg, flags));
-	document()->setHtml (html());
+	html += convertToHTML (msg, flags);
+	document->setHtml (html);
 }
 
 // =============================================================================
@@ -390,21 +390,21 @@ void Context::print (QString text)
 
 // =============================================================================
 //
-IRCConnection* Context::connection()
+IRCConnection* Context::getConnection()
 {
-	switch (type())
+	switch (type)
 	{
-	case CTX_Query:
-		return target().user->connection();
-		break;
+		case CTX_Query:
+			return target.user->connection;
+			break;
 
-	case CTX_Channel:
-		return target().chan->connection();
-		break;
+		case CTX_Channel:
+			return target.chan->connection;
+			break;
 
-	case CTX_Server:
-		return target().conn;
-		break;
+		case CTX_Server:
+			return target.conn;
+			break;
 	}
 
 	return null;

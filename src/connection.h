@@ -97,16 +97,22 @@ class IRCConnection : public QObject
 public:
 	Q_OBJECT
 	DELETE_COPY (IRCConnection)
-	PROPERTY (public,  QString,				nickname,	setNickname,	STOCK_WRITE)
-	PROPERTY (public,  QString,				username,	setUsername,	STOCK_WRITE)
-	PROPERTY (public,  QString,				realname,	setRealname,	STOCK_WRITE)
-	PROPERTY (private, Context*,			context,	setContext,		STOCK_WRITE)
-	PROPERTY (private, QString,				hostname,	setHostname,	STOCK_WRITE)
-	PROPERTY (private, quint16,				port,		setPort,		STOCK_WRITE)
-	PROPERTY (private, EConnectionState,	state,		setState,		STOCK_WRITE)
-	PROPERTY (private, QString,				lineWork,	setLineWork,	STOCK_WRITE)
-	PROPERTY (private, QList<IRCChannel*>,	channels,	setChannels,	STOCK_WRITE)
-	PROPERTY (private, IRCUser*,			ourselves,	setOurselves,	STOCK_WRITE)
+	PROPERTY (QString nickname)
+	PROPERTY (QString username)
+	PROPERTY (QString realname)
+	PROPERTY (Context* context)
+	PROPERTY (QString hostname)
+	PROPERTY (quint16 port)
+	PROPERTY (EConnectionState state)
+	PROPERTY (QString lineWork)
+	PROPERTY (QList<IRCChannel*> channels)
+	PROPERTY (IRCUser* ourselves)
+
+	PROPERTY (QTcpSocket* socket)
+	PROPERTY (QTimer* timer)
+	PROPERTY (QList<IRCUser*> users)
+
+	CLASSDATA (IRCConnection)
 
 public:
 	explicit IRCConnection (QString host, quint16 port, QObject* parent = 0);
@@ -126,11 +132,6 @@ public:
 public slots:
 	void readyRead();
 	void writeLogin();
-
-private:
-	QTcpSocket*			m_socket;
-	QTimer*				m_timer;
-	QList<IRCUser*>		m_users;
 
 	void processMessage (QString msg);
 	void print (QString msg);

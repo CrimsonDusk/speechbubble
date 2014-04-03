@@ -45,13 +45,13 @@ static QString currentTarget()
 {
 	Context* const ctx = Context::currentContext();
 
-	switch (ctx->type())
+	switch (ctx->type)
 	{
 	case CTX_Channel:
-		return ctx->target().chan->name();
+		return ctx->target.chan->name;
 
 	case CTX_Query:
-		return ctx->target().user->nickname();
+		return ctx->target.user->nickname;
 
 	case CTX_Server:
 		error ("this command cannot be run in server contexts");
@@ -110,21 +110,21 @@ DEFINE_COMMAND (quote)
 //
 DEFINE_COMMAND (me)
 {
-	IRCConnection* conn = Context::currentContext()->connection();
+	IRCConnection* conn = Context::currentContext()->getConnection();
 
 	if (conn == null)
 		error ("cannot use /me here");
 
 	QString act = args.join (" ");
 	writeRaw (format ("PRIVMSG %1 :\001ACTION %2\001\n", currentTarget(), act));
-	Context::currentContext()->writeIRCAction (conn->ourselves()->nickname(), act);
+	Context::currentContext()->writeIRCAction (conn->ourselves->nickname, act);
 }
 
 // ============================================================================
 //
 DEFINE_COMMAND (ctcp)
 {
-	IRCConnection* conn = Context::currentContext()->connection();
+	IRCConnection* conn = Context::currentContext()->getConnection();
 
 	if (conn == null)
 		error ("cannot use /ctcp here");

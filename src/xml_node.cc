@@ -4,23 +4,23 @@
 // =============================================================================
 //
 XMLNode::XMLNode (QString name, XMLNode* parent) :
-	m_name (name),
-	m_isCData (false),
-	m_parent (parent)
+	name (name),
+	isCData (false),
+	parent (parent)
 {
 	if (parent)
-		parent->m_subNodes << this;
+		parent->subNodes << this;
 }
 
 // =============================================================================
 //
 XMLNode::~XMLNode()
 {
-	for (XMLNode* node : subNodes())
+	for (XMLNode* node : subNodes)
 		delete node;
 
-	if (parent())
-		parent()->dropNode (this);
+	if (parent)
+		parent->dropNode (this);
 }
 
 // =============================================================================
@@ -28,7 +28,7 @@ XMLNode::~XMLNode()
 QString XMLNode::getAttribute (QString name) const
 {
 	if (hasAttribute (name))
-		return attributes()[name];
+		return attributes[name];
 
 	return "";
 }
@@ -37,30 +37,30 @@ QString XMLNode::getAttribute (QString name) const
 //
 void XMLNode::dropNode (XMLNode* node)
 {
-	m_subNodes.removeOne (node);
+	subNodes.removeOne (node);
 }
 
 // =============================================================================
 //
 bool XMLNode::hasAttribute (QString name) const
 {
-	return attributes().find (name) != attributes().end();
+	return attributes.find (name) != attributes.end();
 }
 
 // =============================================================================
 //
 void XMLNode::setAttribute (QString name, QString data)
 {
-	m_attributes[name] = data;
+	attributes[name] = data;
 }
 
 // =============================================================================
 //
 XMLNode* XMLNode::findSubNode (QString fname, bool recursive)
 {
-	for (XMLNode* node : subNodes())
+	for (XMLNode* node : subNodes)
 	{
-		if (node->name() == fname)
+		if (node->name == fname)
 			return node;
 
 		XMLNode* target;
@@ -78,8 +78,8 @@ QList<XMLNode*> XMLNode::getNodesByName (QString name)
 {
 	QList<XMLNode*> matches;
 
-	for (XMLNode* node : subNodes())
-		if (node->name() == name)
+	for (XMLNode* node : subNodes)
+		if (node->name == name)
 			matches << node;
 
 	return matches;
@@ -89,7 +89,7 @@ QList<XMLNode*> XMLNode::getNodesByName (QString name)
 //
 bool XMLNode::isEmpty() const
 {
-	return contents().isEmpty() && subNodes().isEmpty();
+	return contents.isEmpty() && subNodes.isEmpty();
 }
 
 // =============================================================================
@@ -99,7 +99,7 @@ XMLNode* XMLNode::addSubNode (QString name, QString cont)
 	XMLNode* node = new XMLNode (name, this);
 
 	if (cont.length() > 0)
-		node->setContents (cont);
+		node->contents = cont;
 
 	return node;
 }
@@ -110,7 +110,7 @@ QList<XMLNode*> XMLNode::getNodesByAttribute (QString attrname, QString attrvalu
 {
 	QList<XMLNode*> matches;
 
-	for (XMLNode* node : subNodes())
+	for (XMLNode* node : subNodes)
 		if (node->getAttribute (attrname) == attrvalue)
 			matches << node;
 
@@ -121,7 +121,7 @@ QList<XMLNode*> XMLNode::getNodesByAttribute (QString attrname, QString attrvalu
 //
 XMLNode* XMLNode::getOneNodeByAttribute (QString attrname, QString attrvalue)
 {
-	for (XMLNode* node : subNodes())
+	for (XMLNode* node : subNodes)
 		if (node->getAttribute (attrname) == attrvalue)
 			return node;
 

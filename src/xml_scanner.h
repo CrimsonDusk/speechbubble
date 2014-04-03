@@ -20,12 +20,13 @@ public:
 		EString
 	};
 
-	PROPERTY (private, const char*,	data,			setData,		STOCK_WRITE)
-	PROPERTY (private, const char*,	position,		setPosition,	STOCK_WRITE)
-	PROPERTY (private, QString,		token,			setToken,		STOCK_WRITE)
-	PROPERTY (private, EToken,		tokenType,		setTokenType,	STOCK_WRITE)
-	PROPERTY (private, bool,        isInsideTag,	setInsideTag,	STOCK_WRITE)
-	PROPERTY (private, int,			lineNumber,		setLineNumber,	STOCK_WRITE)
+	PROPERTY (const char* data)
+	PROPERTY (const char* position)
+	PROPERTY (QString token)
+	PROPERTY (EToken tokenType)
+	PROPERTY (bool isInsideTag)
+	PROPERTY (int lineNumber)
+	CLASSDATA (XMLScanner)
 
 public:
 	XMLScanner (const char* data);
@@ -36,11 +37,6 @@ public:
 
 private:
 	bool checkString (const char* c, bool peek = false);
-
-	inline void increasePosition()
-	{
-		m_position++;
-	}
 };
 
 #endif // LIBCOBALTCORE_XML_SCANNER_H

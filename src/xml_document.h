@@ -11,8 +11,9 @@ class XMLDocument
 public:
 	typedef QMap<QString, QString> HeaderType;
 
-	PROPERTY (protected, HeaderType, header,	setHeader,	STOCK_WRITE)
-	PROPERTY (private,   XMLNode*,   root,		setRoot,	STOCK_WRITE)
+	PROPERTY (HeaderType header)
+	PROPERTY (XMLNode* root)
+	CLASSDATA (XMLDocument)
 
 public:
 	XMLDocument (XMLNode* root = null);

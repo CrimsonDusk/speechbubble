@@ -5,3 +5,4 @@ speechbubble.xml
 untracked
 Makefile
 gitinfo.h
+.kdev*

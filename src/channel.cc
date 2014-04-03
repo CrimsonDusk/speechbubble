@@ -6,25 +6,25 @@
 // ============================================================================
 //
 IRCChannel::IRCChannel (IRCConnection* conn, const QString& newname) :
-	m_name (newname),
-	m_joinTime (QTime::currentTime()),
-	m_connection (conn),
-	m_namesDone (true)
+	name (newname),
+	joinTime (QTime::currentTime()),
+	connection (conn),
+	isDoneWithNames (true)
 {
-	setContext (new Context (this));
-	m_connection->addChannel (this);
-	m_connection->write (format ("WHO %1\n", name()));
+	context = new Context (this);
+	connection->addChannel (this);
+	connection->write (format ("WHO %1\n", name));
 }
 
 // ============================================================================
 //
 IRCChannel::~IRCChannel()
 {
-	delete context();
+	delete context;
 
-	for (const UserlistEntry & e : userlist())
+	for (const UserlistEntry& e : userlist)
 	{
-		IRCUser* user = e.userInfo();
+		IRCUser* user = e.userInfo;
 		user->dropKnownChannel (this);
 	}
 }
@@ -35,9 +35,9 @@ UserlistEntry* IRCChannel::addUser (IRCUser* info)
 {
 	UserlistEntry e (info, FNormal);
 	info->addKnownChannel (this);
-	m_userlist << e;
+	userlist << e;
 	emit userlistChanged();
-	return &m_userlist.last();
+	return &userlist.last();
 }
 
 // ============================================================================
@@ -46,11 +46,11 @@ void IRCChannel::removeUser (IRCUser* info)
 {
 	info->dropKnownChannel (this);
 
-	for (const UserlistEntry& e : userlist())
+	for (const UserlistEntry& e : userlist)
 	{
-		if (e.userInfo() == info)
+		if (e.userInfo == info)
 		{
-			m_userlist.removeOne (e);
+			userlist.removeOne (e);
 			emit userlistChanged();
 			return;
 		}
@@ -61,9 +61,9 @@ void IRCChannel::removeUser (IRCUser* info)
 //
 UserlistEntry* IRCChannel::findUserByName (QString name)
 {
-	for (UserlistEntry & e : m_userlist)
+	for (UserlistEntry & e : userlist)
 	{
-		if (e.userInfo()->nickname() == name)
+		if (e.userInfo->nickname == name)
 			return &e;
 	}
 
@@ -74,9 +74,9 @@ UserlistEntry* IRCChannel::findUserByName (QString name)
 //
 UserlistEntry* IRCChannel::findUser (IRCUser* info)
 {
-	for (UserlistEntry & e : m_userlist)
+	for (UserlistEntry & e : userlist)
 	{
-		if (e.userInfo() == info)
+		if (e.userInfo == info)
 			return &e;
 	}
 
@@ -87,8 +87,8 @@ UserlistEntry* IRCChannel::findUser (IRCUser* info)
 //
 bool UserlistEntry::operator== (const UserlistEntry& other) const
 {
-	return (userInfo() == other.userInfo()) &&
-		   (status() == other.status());
+	return (userInfo == other.userInfo) &&
+		   (status == other.status);
 }
 
 // ============================================================================
@@ -100,7 +100,7 @@ FStatusFlags IRCChannel::getStatusOf (IRCUser* info)
 	if (!e)
 		return FNormal;
 
-	return e->status();
+	return e->status;
 }
 
 // ============================================================================
@@ -112,7 +112,7 @@ EStatus IRCChannel::getEffectiveStatusOf (IRCUser* info)
 	if (!e)
 		return FNormal;
 
-	FStatusFlags mode = e->status();
+	FStatusFlags mode = e->status;
 	return effectiveStatus (mode);
 }
 
@@ -203,13 +203,13 @@ void IRCChannel::applyModeString (QString text)
 		}
 
 		if (neg == false)
-			m_modes << c;
+			modes << c;
 		else
-			m_modes.removeOne (c);
+			modes.removeOne (c);
 	}
 
 	if (needNames)
-		connection()->write (format("NAMES :%1\n", name()));
+		connection->write (format("NAMES :%1\n", name));
 }
 
 // ============================================================================
@@ -219,7 +219,7 @@ QString IRCChannel::getModeString() const
 	QString modestring;
 	QStringList args;
 
-	for (char mode : m_modes)
+	for (char mode : modes)
 		modestring += mode;
 
 	args.push_front (modestring);
@@ -246,7 +246,7 @@ void IRCChannel::addNames (const QStringList& names)
 	for (QString nick : names)
 	{
 		FStatusFlags	flags = 0;
-		IRCUser*		user = connection()->findUser (nick, true);
+		IRCUser*		user = connection->findUser (nick, true);
 		bool			repeat;
 
 		do
@@ -266,7 +266,7 @@ void IRCChannel::addNames (const QStringList& names)
 		}
 		while (repeat == true);
 
-		m_newNames << UserlistEntry (user, flags);
+		newNames << UserlistEntry (user, flags);
 	}
 }
 
@@ -280,23 +280,23 @@ void IRCChannel::namesDone()
 	// this is their only known channel and they would be auto-pruned in the
 	// process. So we flag them so that they won't be pruned and perform the
 	// pruning manually once we're done.
-	for (UserlistEntry & e : m_userlist)
+	for (UserlistEntry & e : userlist)
 	{
-		e.userInfo()->setFlags (e.userInfo()->flags() | IRCUser::FDoNotDelete);
-		oldusers << e.userInfo();
-		e.userInfo()->dropKnownChannel (this);
+		e.userInfo->flags |= IRCUser::FDoNotDelete;
+		oldusers << e.userInfo;
+		e.userInfo->dropKnownChannel (this);
 	}
 
-	m_userlist = m_newNames;
+	userlist = newNames;
 
 	// Now check which users in oldusers are still in the userlist.
 	for (auto it = oldusers.begin(); it != oldusers.end(); ++it)
 	{
 		IRCUser* user = *it;
 
-		for (UserlistEntry & e : m_userlist)
+		for (UserlistEntry& e : userlist)
 		{
-			if (e.userInfo() == user)
+			if (e.userInfo == user)
 			{
 				it = oldusers.erase (it) - 1;
 				break;
@@ -307,10 +307,10 @@ void IRCChannel::namesDone()
 	// Now remove the do not delete flag and perform pruning.
 	for (IRCUser * user : oldusers)
 	{
-		user->setFlags (user->flags() & ~IRCUser::FDoNotDelete);
+		user->flags &= ~IRCUser::FDoNotDelete;
 		user->checkForPruning();
 	}
 
-	m_newNames.clear();
+	newNames.clear();
 	emit userlistChanged();
 }

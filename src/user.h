@@ -22,19 +22,20 @@ public:
 
 	// =========================================================================
 	//
-	PROPERTY (public,	QString,			nickname,	setNickname,	STOCK_WRITE)
-	PROPERTY (public, 	QString,			username,	setUsername,	STOCK_WRITE)
-	PROPERTY (public,	QString,			hostname,	setHostname,	STOCK_WRITE)
-	PROPERTY (public,	QString,			realname,	setRealname,	STOCK_WRITE)
-	PROPERTY (public,	Flags,				flags,		setFlags,		STOCK_WRITE)
-	PROPERTY (private,	IRCConnection*,		connection,	setConnection,	STOCK_WRITE)
-	PROPERTY (private,	QList<IRCChannel*>,	channels,	setChannels,	STOCK_WRITE)
-	PROPERTY (public,	Context*,			context,	setContext,		STOCK_WRITE)
+	PROPERTY (QString nickname)
+	PROPERTY (QString username)
+	PROPERTY (QString hostname)
+	PROPERTY (QString realname)
+	PROPERTY (Flags flags)
+	PROPERTY (IRCConnection* connection)
+	PROPERTY (QList<IRCChannel*> channels)
+	PROPERTY (Context* context)
+	CLASSDATA (IRCUser)
 
 public:
 	IRCUser (IRCConnection* conn) :
-		m_flags (0),
-		m_connection (conn) {}
+		flags (0),
+		connection (conn) {}
 
 	~IRCUser();
 
@@ -43,7 +44,7 @@ public:
 	EStatus		getStatusInChannel (IRCChannel* chan);
 	void		dropKnownChannel (IRCChannel* chan);
 	QString		describe() const;
-	QString		userHost() const;
+	QString		getUserHost() const;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS (IRCUser::Flags)

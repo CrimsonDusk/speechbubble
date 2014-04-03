@@ -11,33 +11,32 @@
 #include "user.h"
 
 CONFIG (String, quitmessage, "Bye!")
-static QList<IRCConnection*> gConnections;
-static const QRegExp gUserMask ("^:([^\\!]+)\\!([^@]+)@(.+)$");
+static QList<IRCConnection*> g_allConnections;
+static const QRegExp g_userMask ("^:([^\\!]+)\\!([^@]+)@(.+)$");
 
 // =============================================================================
 //
 IRCConnection::IRCConnection (QString host, quint16 port, QObject* parent) :
 	QObject (parent),
-	m_hostname (host),
-	m_port (port),
-	m_state (CNS_Disconnected),
-	m_ourselves (null),
-	m_socket (new QTcpSocket (this)),
-	m_timer (new QTimer)
+	hostname (host),
+	port (port),
+	state (CNS_Disconnected),
+	ourselves (null),
+	socket (new QTcpSocket (this)),
+	timer (new QTimer)
 {
-	Context* context = new Context (this);
+	context = new Context (this);
 	win->addContext (context);
-	setContext (context);
-	connect (m_timer, SIGNAL (timeout()), this, SLOT (tick()));
-	connect (m_socket, SIGNAL (readyRead()), this, SLOT (readyRead()));
-	gConnections << this;
+	connect (timer, SIGNAL (timeout()), this, SLOT (tick()));
+	connect (socket, SIGNAL (readyRead()), this, SLOT (readyRead()));
+	g_allConnections << this;
 }
 
 // =============================================================================
 //
 IRCConnection::~IRCConnection()
 {
-	gConnections.removeOne (this);
+	g_allConnections.removeOne (this);
 }
 
 // =============================================================================
@@ -48,7 +47,7 @@ void IRCConnection::tick() {}
 //
 void IRCConnection::write (QString text)
 {
-	m_socket->write (text.toUtf8());
+	socket->write (text.toUtf8());
 	::print ("<- %1", text);
 }
 
@@ -56,24 +55,24 @@ void IRCConnection::write (QString text)
 //
 void IRCConnection::writeLogin()
 {
-	write (format ("USER %1 * * :%2\n", username(), realname()));
-	write (format ("NICK %1\n", nickname()));
-	setState (ERegistering);
-	print (format (tr ("Registering as \\b%1:%2:%3..."), nickname(), username(), realname()));
-	disconnect (m_socket, SIGNAL (connected()));
+	write (format ("USER %1 * * :%2\n", username, realname));
+	write (format ("NICK %1\n", nickname));
+	state = ERegistering;
+	print (format (tr ("Registering as \\b%1:%2:%3..."), nickname, username, realname));
+	disconnect (socket, SIGNAL (connected()));
 }
 
 // =============================================================================
 //
 void IRCConnection::connectToServer()
 {
-	m_socket->connectToHost (hostname(), port());
-	m_timer->start (100);
-	setState (EConnecting);
-	print (format (tr ("Connecting to \\b%1:%2\\o..."), hostname(), port()));
-	connect (m_socket, SIGNAL (connected()), this, SLOT (writeLogin()));
-	connect (m_socket, SIGNAL (error (QAbstractSocket::SocketError)),
-			 this, SLOT (processConnectionError (QAbstractSocket::SocketError)));
+	socket->connectToHost (hostname, port);
+	timer->start (100);
+	state = EConnecting;
+	print (format (tr ("Connecting to \\b%1:%2\\o..."), hostname, port));
+	connect (socket, SIGNAL (connected()), this, SLOT (writeLogin()));
+	connect (socket, SIGNAL (error (QAbstractSocket::SocketError)),
+		this, SLOT (processConnectionError (QAbstractSocket::SocketError)));
 }
 
 // =============================================================================
@@ -83,26 +82,26 @@ void IRCConnection::disconnectFromServer (QString quitmessage)
 	if (quitmessage.isEmpty())
 		quitmessage = cfg::quitmessage;
 
-	if (state() == EConnected)
+	if (state == EConnected)
 		write (format ("QUIT :%1\n", quitmessage));
 
-	m_socket->disconnectFromHost();
-	m_timer->stop();
-	setState (CNS_Disconnected);
+	socket->disconnectFromHost();
+	timer->stop();
+	state = CNS_Disconnected;
 }
 
 // =============================================================================
 //
 void IRCConnection::print (QString msg)
 {
-	context()->print (msg);
+	context->print (msg);
 }
 
 // =============================================================================
 //
 void IRCConnection::readyRead() // [slot]
 {
-	QString data = lineWork() + QString (m_socket->readAll());
+	QString data = lineWork + QString (socket->readAll());
 	data.replace ("\r", "");
 	QStringList datalist = data.split ("\n");
 
@@ -110,9 +109,9 @@ void IRCConnection::readyRead() // [slot]
 		processMessage (*it);
 
 	if (datalist.size() > 1)
-		setLineWork (* (datalist.end() - 1));
+		lineWork = datalist.last();
 	else
-		setLineWork (lineWork() + data);
+		lineWork += data;
 }
 
 // =============================================================================
@@ -121,8 +120,8 @@ void IRCConnection::processConnectionError (QAbstractSocket::SocketError err) //
 {
 	(void) err;
 
-	print (format (R"(\b\c4Connection error: %1)", m_socket->errorString ()));
-	setState (CNS_Disconnected);
+	print (format (R"(\b\c4Connection error: %1)", socket->errorString()));
+	state = CNS_Disconnected;
 }
 
 // =============================================================================
@@ -168,23 +167,23 @@ void IRCConnection::processMessage (QString msg)
 //
 void IRCConnection::processJoin (QString msg, QStringList tokens)
 {
-	if (tokens.size() != 3 || gUserMask.indexIn (tokens[0]) == -1)
+	if (tokens.size() != 3 || g_userMask.indexIn (tokens[0]) == -1)
 	{
 		warning (format ("Recieved illegible JOIN from server: %1", msg));
 		return;
 	}
 
 	QString channame = tokens[2];
-	QString joiner = gUserMask.capturedTexts() [1];
+	QString joiner = g_userMask.capturedTexts() [1];
 
 	if (Q_LIKELY (channame.startsWith (":")))
 		channame.remove (0, 1);
 
 	// Find the channel by name. Create it if we join it, but not if someone joins a
 	// channel we know nothing about.
-	IRCChannel* chan = findChannel (channame, joiner == ourselves()->nickname());
+	IRCChannel* chan = findChannel (channame, joiner == ourselves->nickname);
 
-	if (!chan)
+	if (chan == null)
 	{
 		warning (format ("Recieved JOIN from %1 to unknown channel %2", joiner, channame));
 		return;
@@ -193,7 +192,7 @@ void IRCConnection::processJoin (QString msg, QStringList tokens)
 	// Find a data field for the newcomer. They can be totally new to us so we
 	// can create a data field for them if we don't already have one.
 	IRCUser* user = findUser (joiner, true);
-	assert (joiner != ourselves()->nickname() || user == ourselves());
+	assert (joiner != ourselves->nickname || user == ourselves);
 
 	if (chan->findUser (user) != null)
 	{
@@ -204,26 +203,26 @@ void IRCConnection::processJoin (QString msg, QStringList tokens)
 	chan->addUser (user);
 	QString msgToPrint;
 
-	if (user == ourselves())
-		msgToPrint = format (tr ("-> Now talking in %1"), chan->name());
+	if (user == ourselves)
+		msgToPrint = format (tr ("-> Now talking in %1"), chan->name);
 	else
-		msgToPrint = format (tr ("-> %1 has joined %2"), user->nickname(), chan->name());
+		msgToPrint = format (tr ("-> %1 has joined %2"), user->nickname, chan->name);
 
-	chan->context()->print (msgToPrint);
+	chan->context->print (msgToPrint);
 }
 
 // =============================================================================
 //
 void IRCConnection::processPart (QString msg, QStringList tokens)
 {
-	if (tokens.size() < 3 || gUserMask.indexIn (tokens[0]) == -1)
+	if (tokens.size() < 3 || g_userMask.indexIn (tokens[0]) == -1)
 	{
 		warning (format ("Recieved illegible PART from server: %1", msg));
 		return;
 	}
 
 	QString partmsg;
-	QString parter = gUserMask.capturedTexts() [1];
+	QString parter = g_userMask.capturedTexts()[1];
 	QString channame = tokens[2];
 
 	if (channame.startsWith (":"))
@@ -250,10 +249,10 @@ void IRCConnection::processPart (QString msg, QStringList tokens)
 	chan->removeUser (user);
 
 	// If we left the channel, drop it now
-	if (user == ourselves())
+	if (user == ourselves)
 		delete chan;
 	else
-		chan->context()->print (format (tr ("<- %1 has left %2%3"), parter, channame,
+		chan->context->print (format (tr ("<- %1 has left %2%3"), parter, channame,
 			(!partmsg.isEmpty() ? (": " + partmsg) : QString())));
 }
 
@@ -261,13 +260,13 @@ void IRCConnection::processPart (QString msg, QStringList tokens)
 //
 void IRCConnection::processQuit (QString msg, QStringList tokens)
 {
-	if (tokens.size() < 2 || gUserMask.indexIn (tokens[0]) == -1)
+	if (tokens.size() < 2 || g_userMask.indexIn (tokens[0]) == -1)
 	{
 		warning (format (tr ("Recieved illegible QUIT from server: %1"), msg));
 		return;
 	}
 
-	QString quitter = gUserMask.capturedTexts() [1];
+	QString quitter = g_userMask.capturedTexts() [1];
 	QString quitmessage;
 	IRCUser* user = findUser (quitter, false);
 
@@ -287,8 +286,8 @@ void IRCConnection::processQuit (QString msg, QStringList tokens)
 	}
 
 	// Announce the quit in all channels he's in
-	for (IRCChannel* chan : user->channels())
-		chan->context()->print (format (tr ("<- %1 has disconnected%2"),
+	for (IRCChannel* chan : user->channels)
+		chan->context->print (format (tr ("<- %1 has disconnected%2"),
 			quitter, (!quitmessage.isEmpty() ? ": " + quitmessage : QString())));
 
 	delete user;
@@ -298,13 +297,13 @@ void IRCConnection::processQuit (QString msg, QStringList tokens)
 //
 void IRCConnection::processPrivmsg (QString msg, QStringList tokens)
 {
-	if (tokens.size() < 4 || gUserMask.indexIn (tokens[0]) == -1)
+	if (tokens.size() < 4 || g_userMask.indexIn (tokens[0]) == -1)
 	{
 		warning (format (tr ("Recieved illegible PRIVMSG from server: %1"), msg));
 		return;
 	}
 
-	QString usernick = gUserMask.capturedTexts()[1];
+	QString usernick = g_userMask.capturedTexts()[1];
 	IRCUser* user = findUser (usernick, false);
 	Context* ctx = null;
 	QString message = subset (tokens, 3);
@@ -317,7 +316,7 @@ void IRCConnection::processPrivmsg (QString msg, QStringList tokens)
 		IRCChannel* chan = findChannel (tokens[2], false);
 
 		if (chan != null)
-			ctx = chan->context();
+			ctx = chan->context;
 	}
 	elif (message.startsWith ("\001") &&
 		message.startsWith ("\001ACTION", Qt::CaseInsensitive) == false)
@@ -330,10 +329,10 @@ void IRCConnection::processPrivmsg (QString msg, QStringList tokens)
 		// rules (in which case the block above will have caught it) and unless
 		// this is /me in which case it should be treated like a normal chat
 		// message as far as the context goes.
-		if ((ctx = Context::currentContext())->connection() != this)
-			ctx = context();
+		if ((ctx = Context::currentContext())->getConnection() != this)
+			ctx = context;
 	}
-	elif (tokens[2] == ourselves()->nickname())
+	elif (tokens[2] == ourselves->nickname)
 	{
 		// If the target field is our name, then this is a PM coming to us.
 		// Ensure we have a data field for this person now
@@ -341,11 +340,11 @@ void IRCConnection::processPrivmsg (QString msg, QStringList tokens)
 			user = findUser (usernick, true);
 
 		// Also ensure we have a context
-		if (user->context() == null)
-			user->setContext (new Context (user));
+		if (user->context == null)
+			user->context = new Context (user);
 
-		ctx = user->context();
-		::print ("context is user %1's context %2\n", user->nickname(), ctx);
+		ctx = user->context;
+		::print ("context is user %1's context %2\n", user->nickname, ctx);
 	}
 	else
 	{
@@ -406,13 +405,13 @@ void IRCConnection::processPrivmsg (QString msg, QStringList tokens)
 //
 void IRCConnection::processMode (QString msg, QStringList tokens)
 {
-	if (tokens.size() < 4 || gUserMask.indexIn (tokens[0]) == -1)
+	if (tokens.size() < 4 || g_userMask.indexIn (tokens[0]) == -1)
 	{
 		warning (format (tr ("Recieved illegible MODE from server: %1"), msg));
 		return;
 	}
 
-	QString usernick = gUserMask.capturedTexts()[1];
+	QString usernick = g_userMask.capturedTexts()[1];
 	QString modestring = subset (tokens, 3, -1);
 	IRCChannel* chan = findChannel (tokens[2], false);
 
@@ -423,7 +422,7 @@ void IRCConnection::processMode (QString msg, QStringList tokens)
 	}
 
 	chan->applyModeString (modestring);
-	chan->context()->print (format (tr ("* %1 has set mode %2"), usernick, modestring));
+	chan->context->print (format (tr ("* %1 has set mode %2"), usernick, modestring));
 }
 
 // =============================================================================
@@ -445,12 +444,12 @@ void IRCConnection::processTopicChange (QString msg, QStringList tokens)
 
 	QString setterDescription;
 
-	if (gUserMask.indexIn (tokens[0]) != -1)
+	if (g_userMask.indexIn (tokens[0]) != -1)
 	{
 		setterDescription = format ("%1 (%2@%3)",
-			gUserMask.capturedTexts()[1],
-			gUserMask.capturedTexts()[2],
-			gUserMask.capturedTexts()[3]);
+			g_userMask.capturedTexts()[1],
+			g_userMask.capturedTexts()[2],
+			g_userMask.capturedTexts()[3]);
 	}
 	else
 	{
@@ -460,8 +459,8 @@ void IRCConnection::processTopicChange (QString msg, QStringList tokens)
 			setterDescription.remove (0, 1);
 	}
 
-	chan->setTopic (newtopic);
-	chan->context()->print (format (tr ("* %1 has set the channel topic to: %2"), setterDescription, newtopic));
+	chan->topic = newtopic;
+	chan->context->print (format (tr ("* %1 has set the channel topic to: %2"), setterDescription, newtopic));
 }
 
 // =============================================================================
@@ -473,15 +472,15 @@ void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 	switch (num)
 	{
 		case Reply_Welcome:
-			setState (EConnected);
+			state = EConnected;
 			print ("\\b\\c3Connected!");
 
-			if (ourselves() == null)
+			if (ourselves == null)
 			{
-				IRCUser* user = findUser (nickname(), true);
-				user->setUsername (username());
-				user->setRealname (realname());
-				setOurselves (user);
+				IRCUser* user = findUser (nickname, true);
+				user->username = username;
+				user->realname = realname;
+				ourselves = user;
 			}
 		case Reply_YourHost:
 		case Reply_Created:
@@ -534,8 +533,8 @@ void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 			if (Q_LIKELY (topic.startsWith (":")))
 				topic.remove (0, 1);
 
-			chan->setTopic (topic);
-			chan->context()->print (format (tr ("* Channel topic is: %1"), topic));
+			chan->topic = topic;
+			chan->context->print (format (tr ("* Channel topic is: %1"), topic));
 		} break;
 
 		case Reply_TopicSetAt:
@@ -554,7 +553,7 @@ void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 				return;
 			}
 
-			chan->context()->print (format (tr ("* Topic was set by %1 on %2"), tokens[4],
+			chan->context->print (format (tr ("* Topic was set by %1 on %2"), tokens[4],
 				QDateTime::fromTime_t (time).toString (Qt::TextDate)));
 		} break;
 	}
@@ -564,38 +563,38 @@ void IRCConnection::parseNumeric (QString msg, QStringList tokens, int num)
 //
 const QList<IRCConnection*>& IRCConnection::getAllConnections()
 {
-	return gConnections;
+	return g_allConnections;
 }
 
 // =============================================================================
 //
 void IRCConnection::addChannel (IRCChannel* a)
 {
-	if (m_channels.contains (a))
+	if (channels.contains (a))
 		return;
 
-	m_channels << a;
+	channels << a;
 }
 
 // =============================================================================
 //
 void IRCConnection::removeChannel (IRCChannel* a)
 {
-	m_channels.removeOne (a);
+	channels.removeOne (a);
 }
 
 // =============================================================================
 //
 IRCChannel* IRCConnection::findChannel (QString name, bool createIfNeeded)
 {
-	for (IRCChannel* chan : channels())
-		if (chan->name() == name)
+	for (IRCChannel* chan : channels)
+		if (chan->name == name)
 			return chan;
 
 	if (createIfNeeded)
 	{
 		IRCChannel* chan = new IRCChannel (this, name);
-		context()->updateTreeItem();
+		context->updateTreeItem();
 		return chan;
 	}
 
@@ -613,15 +612,15 @@ void IRCConnection::warning (QString msg)
 //
 IRCUser* IRCConnection::findUser (QString nickname, bool createIfNeeded)
 {
-	for (IRCUser * user : m_users)
-		if (user->nickname() == nickname)
+	for (IRCUser* user : users)
+		if (user->nickname == nickname)
 			return user;
 
 	if (createIfNeeded)
 	{
 		IRCUser* user = new IRCUser (this);
-		user->setNickname (nickname);
-		m_users << user;
+		user->nickname = nickname;
+		users << user;
 		return user;
 	}
 
@@ -632,5 +631,5 @@ IRCUser* IRCConnection::findUser (QString nickname, bool createIfNeeded)
 //
 void IRCConnection::forgetUser (IRCUser* user)
 {
-	m_users.removeOne (user);
+	users.removeOne (user);
 }

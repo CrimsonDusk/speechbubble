@@ -101,7 +101,7 @@ static void formatHelper (QString& str)
 }
 
 //!
-//! @brief Format the message with the given args.
+//! \brief Format the message with the given args.
 //!
 //! The formatting ultimately uses QString's arg() method to actually format
 //! the args so the format string should be prepared accordingly, with %1

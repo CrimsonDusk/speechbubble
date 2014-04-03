@@ -12,7 +12,7 @@ QVariant SBLineEdit::inputMethodQuery (Qt::InputMethodQuery type) const
 	if (type == Qt::ImSurroundingText)
 	{
 		QString displayText = text();
-		displayText.replace (BOLD_STR, QString::fromUtf16 (reinterpret_cast<const ushort*> (u"Ⓑ")));
+		displayText.replace (BOLD_STR, UTF16 (u"Ⓑ"));
 		return QVariant (displayText);
 	}
 

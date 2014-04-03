@@ -30,43 +30,43 @@ static void saveElementToXML (QString name, void* ptr, Config::EDataType type)
 	XMLNode* node = g_XMLDocument->navigateTo (name.split ("_"), true);
 
 	if (!node)
-		node = new XMLNode (name, g_XMLDocument->root());
+		node = new XMLNode (name, g_XMLDocument->root);
 
 	switch (type)
 	{
 		case Config::EInt:
 		{
-			node->setContents (QString::number (*reinterpret_cast<int*> (ptr)));
+			node->contents = QString::number (*reinterpret_cast<int*> (ptr));
 			break;
 		}
 
 		case Config::EString:
 		{
-			node->setContents (*reinterpret_cast<QString*> (ptr));
+			node->contents = *reinterpret_cast<QString*> (ptr);
 			break;
 		}
 
 		case Config::EFloat:
 		{
-			node->setContents (QString::number (*reinterpret_cast<float*> (ptr)));
+			node->contents = QString::number (*reinterpret_cast<float*> (ptr));
 			break;
 		}
 
 		case Config::EBool:
 		{
-			node->setContents (*reinterpret_cast<bool*> (ptr) ? "true" : "false");
+			node->contents = *reinterpret_cast<bool*> (ptr) ? "true" : "false";
 			break;
 		}
 
 		case Config::EStringList:
 		{
-			for (XMLNode* subnode : node->subNodes())
+			for (XMLNode* subnode : node->subNodes)
 				delete subnode;
 
 			for (QString item : *reinterpret_cast<QStringList*> (ptr))
 			{
 				XMLNode* subnode = new XMLNode ("item", node);
-				subnode->setContents (item);
+				subnode->contents = item;
 			}
 			break;
 		}
@@ -76,7 +76,7 @@ static void saveElementToXML (QString name, void* ptr, Config::EDataType type)
 			for (int item : *reinterpret_cast<Config::IntList*> (ptr))
 			{
 				XMLNode* subnode = new XMLNode ("item", node);
-				subnode->setContents (QString::number (item));
+				subnode->contents = QString::number (item);
 			}
 			break;
 		}
@@ -88,14 +88,14 @@ static void saveElementToXML (QString name, void* ptr, Config::EDataType type)
 			for (auto it = map.begin(); it != map.end(); ++it)
 			{
 				XMLNode* subnode = new XMLNode (it.key(), node);
-				subnode->setContents (it.value());
+				subnode->contents = it.value();
 			}
 			break;
 		}
 
 		case Config::EFont:
 		{
-			node->setContents (reinterpret_cast<QFont*> (ptr)->toString());
+			node->contents = reinterpret_cast<QFont*> (ptr)->toString();
 			break;
 		}
 	}
@@ -110,48 +110,48 @@ static void loadFromXML (void* ptr, Config::EDataType type, XMLNode* node)
 	switch (type)
 	{
 		case Config::EInt:
-			*reinterpret_cast<int*> (ptr) = node->contents().toLong();
+			*reinterpret_cast<int*> (ptr) = node->contents.toLong();
 			break;
 
 		case Config::EString:
-			*reinterpret_cast<QString*> (ptr) = node->contents();
+			*reinterpret_cast<QString*> (ptr) = node->contents;
 			break;
 
 		case Config::EFloat:
-			*reinterpret_cast<float*> (ptr) = node->contents().toFloat();
+			*reinterpret_cast<float*> (ptr) = node->contents.toFloat();
 			break;
 
 		case Config::EBool:
 		{
-			QString val = node->contents();
+			QString val = node->contents;
 			*reinterpret_cast<bool*> (ptr) = (val == "true" || val == "1" || val == "on" || val == "yes");
 			break;
 		}
 
 		case Config::EStringList:
 		{
-			for (const XMLNode* subnode : node->subNodes())
-				reinterpret_cast<QStringList*> (ptr)->append (subnode->contents());
+			for (const XMLNode* subnode : node->subNodes)
+				reinterpret_cast<QStringList*> (ptr)->append (subnode->contents);
 			break;
 		}
 
 		case Config::EIntList:
 		{
-			for (const XMLNode* subnode : node->subNodes())
-				reinterpret_cast<QList<int>*> (ptr)->append (subnode->contents().toLong());
+			for (const XMLNode* subnode : node->subNodes)
+				reinterpret_cast<QList<int>*> (ptr)->append (subnode->contents.toLong());
 			break;
 		}
 
 		case Config::EStringMap:
 		{
-			for (const XMLNode * subnode : node->subNodes())
-				(*reinterpret_cast<Config::StringMap*> (ptr))[subnode->name()] = subnode->contents();
+			for (const XMLNode * subnode : node->subNodes)
+				(*reinterpret_cast<Config::StringMap*> (ptr))[subnode->name] = subnode->contents;
 			break;
 		}
 
 		case Config::EFont:
 		{
-			reinterpret_cast<QFont*> (ptr)->fromString (node->contents());
+			reinterpret_cast<QFont*> (ptr)->fromString (node->contents);
 			break;
 		}
 	}
@@ -178,7 +178,6 @@ Config::ConfigAdder::ConfigAdder (void* ptr, Config::EDataType type, const char*
 bool Config::loadFromFile (const QString& fname)
 {
 	print ("config::load: Loading configuration file from %1\n", fname);
-
 	XMLDocument* doc = XMLDocument::loadFromFile (fname);
 
 	if (doc == null)

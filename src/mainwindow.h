@@ -12,7 +12,9 @@ class Ui_MainWindow;
 class MainWindow : public QMainWindow
 {
 	Q_OBJECT
-	PROPERTY (private, bool, isCtrlPressed,	setCtrlPressed,	STOCK_WRITE)
+	PROPERTY (bool isCtrlPressed)
+	PROPERTY (Ui_MainWindow* ui)
+	CLASSDATA (MainWindow)
 
 	public:
 		explicit MainWindow (QWidget* parent = 0, Qt::WindowFlags flags = 0);
@@ -39,8 +41,6 @@ class MainWindow : public QMainWindow
 		void keyReleaseEvent (QKeyEvent* ev);
 
 	private:
-		Ui_MainWindow* m_ui;
-
 		void updateWindowTitle();
 };
 
